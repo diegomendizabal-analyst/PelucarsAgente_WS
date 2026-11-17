@@ -1,0 +1,22 @@
+# Dependencias y salidas generadas, incluso en directorios anidados.
+**/node_modules/
+**/.next/
+**/out/
+**/coverage/
+*.tsbuildinfo
+
+# Configuración local y credenciales.
+.env*
+**/.env*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+
+# Preparación local de pull requests; no forma parte del producto.
+/.pr-work/
+
+# Archivos locales del sistema y logs.
+.DS_Store
+Thumbs.db
+*.log
