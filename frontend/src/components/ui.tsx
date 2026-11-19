@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, Info, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+export function RequiredMark() { return <span className="required-mark" aria-hidden="true">*</span>; }
+
 export function PageHeading({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: ReactNode }) {
   return <div className="page-heading"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="page-description">{description}</p></div>{action && <div className="heading-action">{action}</div>}</div>;
 }

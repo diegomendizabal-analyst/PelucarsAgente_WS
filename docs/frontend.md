@@ -1,5 +1,17 @@
 # Frontend visual — Pelucars
 
+## Gestión de usuarios — revisión del 19/11/2026
+
+En `/usuarios`, la lista del equipo ocupa el centro de la pantalla. Incluye búsqueda por nombre, correo o teléfono y filtro de acceso habilitado/deshabilitado. En escritorio se presenta como tabla; en móvil, cada fila agrupa la identidad y sus datos.
+
+**Crear vendedor**, en la cabecera, abre un modal. **Editar**, en cada vendedor, abre el mismo patrón con los datos actuales. Ambos separan datos personales de acceso al sistema; las cuentas de administrador aparecen protegidas. El control **Cuenta habilitada** integra casilla, título y explicación en un bloque clickeable y aclara que el cambio se aplica al guardar.
+
+El modal permite cancelar o cerrar con Escape, contiene el foco del teclado y bloquea el cierre durante el envío. Los errores conservan el formulario y el éxito real muestra una confirmación antes de volver al equipo. No se modifican los permisos ni las operaciones del servidor en esta revisión.
+
+Actualización posterior: nombre, teléfono y correo de contacto son obligatorios al crear y editar vendedores; correo de acceso y contraseña inicial también lo son en el alta. Se señalan con asterisco rojo, con una leyenda, errores junto a cada campo y foco en el primero incorrecto. Los valores se conservan ante errores. La validación compartida se ejecuta también en servidor; la base exige los contactos. Las cuentas históricas incompletas muestran «Completar al editar». El mismo componente de asterisco rojo se utiliza en alta y edición de vehículos, que continúan siendo formularios visuales sin persistencia.
+
+> **Actualización 19/11/2026:** esta rama incorpora acceso real con Supabase Auth y gestión de vendedores en `/usuarios`. El selector de rol fue reemplazado por el perfil autenticado. Las rutas comerciales conservan su muestra ficticia, compartida y claramente rotulada; todavía no consultan cartera real. Ver [autenticacion.md](autenticacion.md) para el estado de la conexión, requisitos y pruebas actuales. El recorrido y las verificaciones del 18/11 que siguen describen la entrega visual previa.
+
 **Revisión visual del 18/11/2026:** se corrigen la distribución de las filas y la jerarquía de las cronologías, con componentes compartidos en listados y fichas. El diagnóstico y la cobertura de revisión están en [pendientes-frontend.md](pendientes-frontend.md).
 
 Actualizado el 18 de noviembre de 2026. Aplicación Next.js en `frontend/`. A pedido del usuario, la interfaz incorpora una muestra ficticia local para evaluar las pantallas antes de definir el modelo final. No hay conexión a Supabase, autenticación, persistencia, backend de negocio ni envíos.

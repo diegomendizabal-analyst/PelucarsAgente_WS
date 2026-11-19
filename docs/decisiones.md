@@ -1,64 +1,58 @@
-# Decisiones de diseño
+# Decisiones vigentes — Pelucars
+Actualizado el 19/11/2026. Fuentes: [alcance V2](referencias/alcance-v2-2026-11-19.md) y [modelo backend V1](referencias/modelo-backend-v1-2026-11-19.md), conservados tal como se recibieron. Las conclusiones de la tabla del alcance actualizan los párrafos anteriores cuando hay diferencias. Las contradicciones restantes se explicitan, sin convertirlas en reglas de código.
 
-Fecha: 17 de noviembre de 2026. Alcance: modelo documental y frontend visual. No autoriza implementación de integraciones.
+El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus identificadores D01–D19 no equivalen a los del alcance V2. El [modelo vigente](modelo-de-datos.md) sustituye el diseño inicial.
 
-Las observaciones visuales reportadas al preparar el primer PR se registran por separado en [pendientes-frontend.md](pendientes-frontend.md). El 18/11/2026 el usuario autorizó corregirlas y mejorar las filas y cronologías en todas las vistas.
+## Confirmado
 
-## Actualización visual — 18/11/2026
+- Una sucursal; V1 no necesita zonas ni sucursales en el modelo.
+- Supabase Auth para correo/contraseña, perfiles y roles admin/seller. Dos administradores individuales previstos, sin límite definido de vendedores.
+- Demo inicial: un administrador y un vendedor, con correos de prueba aprobados. Los vendedores se crean desde el sistema; no hay registro público.
+- Contacto del vendedor: teléfono internacional y correo de contacto obligatorios desde ahora en alta y edición, incluida la demo (confirmado el 19/11). Correo de contacto separado del de acceso, personal o laboral, sin exigencia de casilla corporativa. Las cuentas anteriores conservan sus datos; deben completarse al editar. No cambiar sus accesos ni rellenar valores ficticios.
+- Administradores ven todo. Vendedores acceden al detalle sólo de sus oportunidades actuales; el permiso se aplica a mensajes, score, evidencia, relaciones y contadores.
+- Pendientes: score, mensajes, resumen e información que revele intención permanecen ocultos. La lista exacta de campos mínimos sigue pendiente.
+- Nueva consulta recurrente con responsable anterior deshabilitado vuelve a la bandeja (D04).
+- Asignación manual y reasignación administrativa incluidas (D11). El responsable nuevo obtiene el detalle existente; el anterior pierde acceso (D06).
+- El vendedor toma el teléfono del panel y contacta desde su teléfono particular (D09). No se promete traslado técnico ni captura del chat privado.
+- Actividades realizadas y programadas incluidas (D10); programar no cuenta como intento realizado. Sin recordatorios automáticos.
+- Cinco estados: Nueva consulta, En seguimiento, Vendido, Perdido y En espera de stock. Este último nombre ya está definido (D14).
+- Ventas registradas explícitamente por responsable/admin, con actualización transaccional de la unidad vendida. El administrador gestiona inventario (D17).
+- El catálogo reside en Supabase y se administra desde el panel; bot sin catálogo, precios ni stock en V1.
+- Se conserva el interés original aunque la venta sea de una alternativa. La llegada de stock no reabre ni contacta automáticamente.
+- Fotografías, dashboards y chat privado del vendedor fuera de V1.
 
-Se adopta una paleta provisional blanca, negra y gris con acentos rojos, tomando sólo los colores de la referencia enviada. La fotografía del logo no se incorpora. Se mantiene la marca tipográfica existente hasta recibir un manual o recursos oficiales. Listados, historial, actividades, recontactos y compras comparten componentes visuales; los mensajes distinguen autor, fecha y evidencia. Estos cambios no modifican el modelo propuesto ni habilitan operaciones comerciales.
+## Primera implementación autorizada
 
-## Actualización: muestra local autorizada
+Login/logout, perfiles, habilitación, auditoría y alta/edición básica de vendedores. Migración de identidad y cuentas iniciales de demo. Las operaciones comerciales siguen siendo una muestra local: no se conectan silenciosamente al nuevo esquema.
 
-El usuario pidió incorporar unos pocos datos ficticios para evaluar la interfaz antes de compartir el modelo definitivo. Esta indicación reemplaza la restricción anterior de no mostrar datos de prueba **sólo para la demostración local**. No autoriza seed de base de datos, Supabase, persistencia, autenticación, backend ni automatizaciones.
+El rol y la habilitación no dependen de metadata editable. El usuario sin perfil completo queda sin acceso. La gestión visible crea únicamente vendedores; las cuentas admin se incorporan mediante procedimiento controlado. La separación entre habilitación y disponibilidad está modelada, con disponibilidad inicialmente false y sin automatización.
 
-Se agregan dos vehículos, dos clientes, dos oportunidades (una en espera y otra asignada), seis mensajes ficticios, un intento de recontacto, una tarea programada y una compra histórica. Todos están centralizados en `frontend/src/lib/demo-data.ts`; son datos de presentación reemplazables, no un contrato de dominio. Precios, stock, estados, zonas, escala y valores de score son ilustrativos. Las decisiones pendientes enumeradas abajo continúan abiertas.
+El alta de Auth y la inserción de perfil no son una sola transacción. Un fallo intermedio requiere conciliación; no se borra ni reintenta indiscriminadamente una identidad existente. Auditoría nunca almacena contraseñas/tokens. Ver [autenticacion.md](autenticacion.md) para configuración, migración y verificaciones.
 
-Los listados principales muestran ahora la muestra local; las fichas vacías continúan accesibles desde sus pies de listado. Las operaciones comerciales siguen deshabilitadas. Los apartados siguientes documentan las decisiones de la primera etapa, salvo esta excepción explícita sobre datos ficticios.
+## Pendientes del alcance actualizado
 
-## Confirmado por el producto
-
-- Cliente y oportunidad son entidades separadas; un cliente puede consultar y comprar varias veces.
-- Nuevos leads ingresan en espera. Asignación automática futura a vendedores disponibles.
-- Toma voluntaria de leads de la propia zona incluso estando ocupado.
-- Vendedor: consulta clientes/historial/score/vehículos y cambia estados de sus oportunidades. Admin: además administra vehículos y responsables. Inicialmente dos administradores, sin crear cuentas en esta etapa.
-- Inventario administrado desde el frontend, persistido en Supabase en una etapa futura. La API externa no es fuente de datos de esta entrega.
-- Bot futuro: máximo de tres mensajes salientes por recepción inicial, sin catálogo ni respuestas de precio/stock, y derivación de toda consulta comercial a vendedor.
-- Sin datos ficticios, seed, migraciones, RLS ejecutable, autenticación, backend, automatización, envío ni persistencia en esta entrega.
-
-## Propuestas adoptadas sólo para estructurar el diseño
-
-- Conversación ligada a un cliente, con vínculo N:M a oportunidades para conservar un mismo hilo a través de consultas sucesivas.
-- Mensajes con emisor identificado y contenido original conservado; score versionado con fragmentos, offsets y vínculo al mensaje.
-- Separar tareas de seguimiento e intentos efectivamente realizados. La agenda no se cuenta como intentos.
-- Baja lógica del inventario y perfiles; compras con snapshots para preservar historia.
-- En espera es una condición de asignación, independiente del catálogo de estados comerciales.
-- Selector Admin/Vendedor en memoria, rotulado demostración; se reinicia al recargar. Las rutas `vista-previa` no representan IDs ni registros de prueba.
-- Valores desconocidos como “Sin información” o “—”, sin números ni registros simulados. Formularios editables sólo para inspección visual, acciones de escritura deshabilitadas.
-- Fuentes del sistema para que el frontend no necesite descargar tipografías externas al compilar.
-
-## Decisiones pendientes
-
-| ID | Pregunta a resolver | Impacto / opciones a evaluar |
+| ID V2 | Decisión pendiente | Tratamiento actual |
 | --- | --- | --- |
-| D01 | ¿Qué es zona y cómo se determina? | Localidad, cobertura comercial u otra unidad; pertenencia múltiple; zona desconocida; qué ocurre al cambiar la zona del cliente. El modelo no impone geografía. |
-| D02 | ¿Cuál es el límite de asignaciones y qué cuenta como carga? | Por vendedor/equipo/estado; capacidad configurable; alcance sobre asignación automática y toma voluntaria. No hay valor predeterminado. |
-| D03 | ¿Cómo se determina disponibilidad? | Manual, horario, actividad o carga; persistencia de ocupado/desconectado; elegibilidad de Admin como vendedor. No bloquear la toma voluntaria únicamente por ocupado. |
-| D04 | ¿Qué consultas puede leer cada vendedor? | Todos los clientes, equipo, cartera, zona o combinación. Debe permitir el historial autorizado sin filtrar mensajes/evidencias de otros ámbitos por accidente. |
-| D05 | ¿Cuándo un nuevo contacto abre consulta y cuándo reabre? | Evitar contar cada mensaje como consulta. Definir consultas simultáneas, nueva intención y reaperturas; no fijar una ventana temporal arbitraria. |
-| D06 | ¿Qué delimita una recepción inicial y qué consume el máximo de tres? | Reingreso, fallos de entrega, mensajes divididos, cierre y derivación. Preservar la idempotencia de reintentos y la reserva atómica del presupuesto. |
-| D07 | ¿Cuáles son estados y transiciones permitidas? | Estados terminales, motivo de cierre, reapertura, permisos Admin y relación con compras. No hay catálogo comercial inventado en el frontend. |
-| D08 | ¿Cómo funciona el score? | Escala, criterios, pesos, umbrales, recálculo y revisión humana. No asumir suma de aportes ni escala 0–100. |
-| D09 | ¿Puede una evidencia usar mensajes de consultas anteriores? | Propuesta actual: sólo misma oportunidad. Definir mensajes editados, transcripciones, retención, versionado y revisiones del resultado. |
-| D10 | ¿Cómo identificar y fusionar clientes? | Teléfonos compartidos o reciclados, varios contactos por persona, verificación y unificación auditada del historial. No UQ global de teléfono todavía. |
-| D11 | ¿Un vehículo representa una unidad o un grupo equivalente? | Define stock, posible VIN/patente, reservas, stock disponible y unicidad. Se propone cantidad entera sin implementar reservas ni descuentos automáticos. |
-| D12 | ¿Qué información comercial de vehículos es obligatoria? | Versión, rango de año, precio cero frente a no informado, monedas admitidas; opciones ARS/USD sólo propuestas visuales. |
-| D13 | ¿Quién registra compras anteriores y con qué detalle? | Importación/manual, anulaciones, comprobantes, impuestos, descuentos, permutas, monedas mixtas y cuotas. No se implementa un módulo de venta. |
-| D14 | ¿Cómo se transfieren tareas al reasignar? | Mantener autor y ejecutor históricos; elegir qué pasa con actividades pendientes y responsables. |
-| D15 | ¿Qué resultados y canales tienen los intentos? | Normalizar contacto logrado, no respuesta y otros resultados sin confundir respuesta, mensaje e intento. Los textos del formulario son diseño. |
-| D16 | ¿Quién administra cuentas, roles y zonas? | Gestionar responsables está confirmado; administrar identidades no necesariamente. Alta futura de los dos Admin, protección de la última cuenta y bajas. |
-| D17 | ¿Qué se conserva, por cuánto tiempo y quién corrige? | Mensajes, adjuntos, evidencia, contactos y compras; anonimización, auditoría y registros dados de baja. Sin plazos inventados. |
-| D18 | ¿Qué criterio ordenará la asignación automática? | Prioridad, equidad, antigüedad o score; casos sin vendedores disponibles y liberación de leads. Toda consulta comercial se deriva independientemente del score. |
-| D19 | ¿Cuál es el manual de marca definitivo? | Confirmar tipografías, tono exacto del rojo, logotipo autorizado y reglas de uso. La paleta actual es una interpretación provisional de la referencia, sin incorporar su fotografía. |
+| D01 | Cuándo se libera un vendedor | No deducir disponibilidad del estado comercial. |
+| D02 | Capacidad de toma voluntaria | Sin límite inventado. |
+| D03 | Quién cambia disponibilidad | Separada de cuenta habilitada; sin control operativo implementado. |
+| D04 | Elegir responsable anterior con varios históricos | La excepción por deshabilitación ya está resuelta: bandeja. |
+| D05 | Campos de la bandeja compartida | Propuesta mínima ID/espera/estado; no implementar una proyección definitiva aún. |
+| D07 | Ventana de siete días | Faltan origen del cómputo, retornos anteriores y excepciones. |
+| D08 | Preguntas y score | Aprobar criterios, pesos y momento; no implementar motor. |
+| D09 | Cola al liberarse un vendedor | El cuerpo dice asignar el más antiguo al liberarse; la conclusión habla de toma voluntaria si no hubo libres. Confirmar si la segunda limita también el drenaje posterior. |
+| D12 | Correos a otros vendedores por pendientes | No incluir sin acuerdo. El correo al asignado es parte del alcance futuro de asignaciones. |
+| D13 | Carga inicial e integración externa | Reunión pendiente; sin importación ni sincronización implícita. |
+| D15 | Devolver oportunidades tras conocer score | Reasignación administrativa como mecanismo confirmado; no agregar devolución automática. |
+| D16 | Granularidad y normalización de catálogo | Adoptar separación catálogo/unidades como diseño; confirmar consolidación y nombres ambiguos antes de conectar inventario. |
+| D17 | Anulación/corrección de una venta | Administrar stock está confirmado; faltan trazabilidad, permisos y reversión de venta. No liberar stock por cambiar una etiqueta. |
 
-Antes de integrar datos deben resolverse especialmente D01–D07, D10–D12 y la visibilidad/retención. Resolver decisiones no forma parte de esta implementación visual.
+## Decisiones técnicas pendientes
+
+- Completar los contactos de vendedores anteriores y validar `seller_contact_required` en una migración posterior. La restricción ya exige datos en nuevas escrituras; `NOT VALID` se refiere solamente a filas históricas.
+- El último chequeo de advisors informó `auth_leaked_password_protection`: revisar la protección de contraseñas filtradas en Supabase antes de producción. No se modificó configuración de Auth en este incremento.
+
+- Migración de identidad aplicada y cuentas de demo creadas. Pendiente desactivar el registro público: el token devolvió HTTP 403 y el control aparece bloqueado para el usuario; debe revisarlo un Owner/Administrator de Supabase. Las cuentas sin perfil no acceden al CRM.
+- Cambiar correo de acceso, recuperación y cambio de contraseña: siguiente incremento del módulo de usuarios; no enviar emails a direcciones .example.
+- Antes de sustituir muestras por datos reales, aplicar RLS por responsable a todas las relaciones comerciales y retirar las dependencias de demo-data.
+- Manual de marca pendiente: colores actuales blanco/negro/grises/rojo, tipografías del sistema y marca tipográfica provisional. No se incorporó la foto del logo.
