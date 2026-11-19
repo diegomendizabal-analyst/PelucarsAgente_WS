@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { ArrowRightLeft, Bot, CalendarClock, CarFront, History, Inbox, LockKeyhole, MessageSquare, ReceiptText, Sparkles, UserRound } from "lucide-react";
 import { demoAttempts, demoClients, demoCount, demoDate, demoFollowups, demoMoney, demoOpportunities, demoPurchases, demoVehicles, vehicleName, type DemoOpportunity, type DemoVehicle } from "@/lib/demo-data";
 import { usePreviewRole } from "./app-shell";
-import { BackLink, EmptyState, Metric, Notice, PageHeading, Panel, PendingButton } from "./ui";
+import { RequiredMark, BackLink, EmptyState, Metric, Notice, PageHeading, Panel, PendingButton } from "./ui";
 import { RecordArrow, RecordCell, RecordIdentity, SectionIntro, StatusBadge, TimelineEvent } from "./record-ui";
 
 const historyPresentation = {
@@ -159,13 +159,13 @@ export function DemoVehicleDetail({ vehicle, editing = false }: { vehicle: DemoV
     <PageHeading eyebrow="VEHÍCULO DE DEMOSTRACIÓN" title={`${editing ? "Editar " : ""}${vehicleName(vehicle)}`} description={`${vehicle.version} · ${vehicle.year}`} action={!editing && (role === "admin" ? <Link className="button secondary" href={`${path}/editar`}>Ver formulario de edición</Link> : <span className="read-only"><LockKeyhole size={15} /> Sólo lectura</span>)} />
     <Notice>Vehículo ficticio. Precio y stock son ejemplos para revisar el diseño, no información comercial real. Los cambios no se guardan.</Notice>
     {editing ? (role === "admin" ? <Panel title="Datos del vehículo"><form className="panel-body form-grid" onSubmit={(event) => event.preventDefault()}>
-      <label>Marca *<input name="marca" required defaultValue={vehicle.brand} /></label>
-      <label>Modelo *<input name="modelo" required defaultValue={vehicle.model} /></label>
+      <label><span>Marca <RequiredMark /></span><input name="marca" required defaultValue={vehicle.brand} /></label>
+      <label><span>Modelo <RequiredMark /></span><input name="modelo" required defaultValue={vehicle.model} /></label>
       <label>Versión<input name="version" defaultValue={vehicle.version} /></label>
-      <label>Año *<input name="anio" required type="number" step="1" defaultValue={vehicle.year} /></label>
-      <label>Precio *<input name="precio" required type="number" min="0" step="0.01" defaultValue={vehicle.price} /></label>
-      <label>Moneda *<select name="moneda" required defaultValue={vehicle.currency}><option value="ARS">ARS · Peso argentino</option><option value="USD">USD · Dólar estadounidense</option></select></label>
-      <label>Stock *<input name="stock" required type="number" min="0" step="1" defaultValue={vehicle.stock} /></label>
+      <label><span>Año <RequiredMark /></span><input name="anio" required type="number" step="1" defaultValue={vehicle.year} /></label>
+      <label><span>Precio <RequiredMark /></span><input name="precio" required type="number" min="0" step="0.01" defaultValue={vehicle.price} /></label>
+      <label><span>Moneda <RequiredMark /></span><select name="moneda" required defaultValue={vehicle.currency}><option value="ARS">ARS · Peso argentino</option><option value="USD">USD · Dólar estadounidense</option></select></label>
+      <label><span>Stock <RequiredMark /></span><input name="stock" required type="number" min="0" step="1" defaultValue={vehicle.stock} /></label>
       <div className="full-width form-actions"><Link className="button secondary" href={path}>Volver sin guardar</Link><PendingButton>Guardar cambios</PendingButton></div>
     </form></Panel> : <section className="panel"><EmptyState icon={LockKeyhole} title="Vista de vendedor: sólo consulta" description="Cambiá a Admin en el selector de demostración para revisar la edición." compact /></section>) : <>
       <Panel title="Información del vehículo"><Details items={[["Marca", vehicle.brand], ["Modelo", vehicle.model], ["Versión", vehicle.version], ["Año", vehicle.year], ["Precio ficticio", demoMoney(vehicle.price, vehicle.currency)], ["Moneda", vehicle.currency], ["Stock ficticio", demoCount(vehicle.stock, "unidad", "unidades")], ["Estado del registro", "Activo · ejemplo"]]} /></Panel>

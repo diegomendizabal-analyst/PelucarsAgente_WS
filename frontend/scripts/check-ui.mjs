@@ -9,11 +9,17 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { parseEnv } from 'node:util';
 
 const base = process.argv.find((arg) => /^https?:/.test(arg)) ?? 'http://127.0.0.1:3100';
 assert(['127.0.0.1', 'localhost'].includes(new URL(base).hostname), 'Usar un servidor local.');
 const hmr = process.argv.includes('--hmr');
+const publicOnly = process.argv.includes('--public-only');
+const smoke = process.argv.includes('--smoke');
 const root = fileURLToPath(new URL('../', import.meta.url));
+const credentialsPath = join(root, '.env.demo.local');
+const credentials = existsSync(credentialsPath) ? parseEnv(await readFile(credentialsPath, 'utf8')) : {};
+if (!publicOnly) assert(credentials.DEMO_ADMIN_PASSWORD && credentials.DEMO_SELLER_PASSWORD, 'Faltan cuentas reales de demo. Usar --public-only para revisar login y rutas cerradas.');
 const output = join(root, '.next', 'ui-qa', hmr ? 'dev' : 'build');
 const executable = [process.env.CHROME_BIN, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/chromium', '/usr/bin/google-chrome'].find((path) => path && existsSync(path));
 assert(executable, 'No se encontró Chrome/Chromium. Definir CHROME_BIN.');
@@ -27,6 +33,7 @@ const pending = new Map();
 const errors = [];
 let id = 0;
 let assertions = 0;
+let location = 'inicio';
 try {
   let port;
   for (let i = 0; i < 80; i++) {
@@ -47,7 +54,12 @@ try {
       pending.delete(message.id);
       if (message.error) call.reject(new Error(JSON.stringify(message.error))); else call.resolve(message.result);
     }
-    if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails.text);
+    if (message.method === 'Page.frameNavigated' && !message.params.frame.parentId) location = message.params.frame.url;
+    if (message.method === 'Runtime.exceptionThrown') {
+      const detail = `${location}: ${message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text}`;
+      errors.push(detail);
+      console.error(detail);
+    }
     if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') errors.push(message.params.args.map((arg) => arg.value ?? arg.description ?? '').join(' '));
   };
   function send(method, params = {}) {
@@ -80,6 +92,26 @@ try {
     await evaluate(`[...document.querySelectorAll('button')].find(el => el.textContent.trim().startsWith(${JSON.stringify(label)})).click()`);
     await delay(100);
   }
+  async function signIn(role) {
+    if (await evaluate(`!!document.querySelector('.logout-button')`)) {
+      await click('Salir');
+      await until(`location.pathname === '/login'`);
+    } else if (await evaluate(`location.pathname === '/acceso-denegado'`)) {
+      await click('Volver al inicio de sesión');
+      await until(`location.pathname === '/login'`);
+    }
+    await go('/login');
+    const prefix = role === 'admin' ? 'DEMO_ADMIN' : 'DEMO_SELLER';
+    await change('#login-email', credentials[`${prefix}_EMAIL`]);
+    await change('#login-password', credentials[`${prefix}_PASSWORD`]);
+    await click('Ingresar');
+    await until(`location.pathname === '/' && !!document.querySelector('.account-menu')`);
+    assert.equal(await evaluate(`!!document.querySelector('#preview-role')`), false);
+    assert.equal(await evaluate(`!!document.querySelector('nav a[href="/usuarios"]')`), role === 'admin');
+    const cookies = await send('Network.getCookies', { urls: [base] });
+    const sessionCookies = cookies.cookies.filter(cookie => cookie.name.startsWith('sb-'));
+    assert(sessionCookies.length > 0 && sessionCookies.every(cookie => cookie.httpOnly), 'Cookies de sesión HttpOnly');
+  }
   async function check(context) {
     const state = await evaluate(`(() => {
       const css = el => getComputedStyle(el);
@@ -111,17 +143,45 @@ try {
   }
   await send('Runtime.enable');
   await send('Page.enable');
-  const routes = ['/', '/clientes', '/vehiculos', '/clientes/demo-ana', '/clientes/demo-bruno', '/oportunidades/demo-consulta-ana', '/oportunidades/demo-consulta-bruno', '/vehiculos/demo-corolla', '/vehiculos/demo-cronos', '/vehiculos/demo-corolla/editar', '/vehiculos/nuevo', '/clientes/vista-previa', '/oportunidades/vista-previa', '/vehiculos/vista-previa', '/vehiculos/vista-previa/editar'];
-  for (const width of [1440, 768, 390, 320]) {
+  for (const route of ['/', '/usuarios', '/clientes/demo-ana', '/vehiculos/demo-corolla/editar']) {
+    await send('Page.navigate', { url: base + route });
+    await until(`location.pathname === '/login' && !!document.querySelector('#login-email')`);
+    assert.equal(await evaluate(`!!document.querySelector('.account-menu')`), false, 'Ruta privada sin sesión');
+  }
+  for (const width of (smoke ? [1440, 390] : [1440, 768, 390, 320])) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width <= 390 });
-    for (const route of routes) {
-      await go(route);
-      for (const role of ['vendedor', 'admin']) {
-        if (role === 'admin') await change('#preview-role', role);
+    await go('/login');
+    await check(`${width} login`);
+    if (width === 1440 || width === 390) await capture(`login-${width}`);
+  }
+  if (publicOnly) {
+    assert.deepEqual(errors, [], 'Errores de consola en acceso público');
+    console.log('OK: login responsive y cuatro rutas protegidas sin sesión. No se probaron cuentas reales.');
+    await send('Browser.close');
+  } else {
+  const routes = smoke ? ['/', '/clientes/demo-bruno', '/oportunidades/demo-consulta-bruno', '/vehiculos/demo-corolla/editar'] : ['/', '/clientes', '/vehiculos', '/clientes/demo-ana', '/clientes/demo-bruno', '/oportunidades/demo-consulta-ana', '/oportunidades/demo-consulta-bruno', '/vehiculos/demo-corolla', '/vehiculos/demo-cronos', '/vehiculos/demo-corolla/editar', '/vehiculos/nuevo', '/clientes/vista-previa', '/oportunidades/vista-previa', '/vehiculos/vista-previa/editar'];
+  for (const width of (smoke ? [1440, 390] : [1440, 768, 390, 320])) {
+    await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width <= 390 });
+    for (const role of ['vendedor', 'admin']) {
+      await signIn(role);
+      for (const route of routes) {
+        await go(route);
         await check(`${width} ${route} ${role}`);
-        if (route.endsWith('/editar') || route.endsWith('/nuevo')) assert.equal(await evaluate(`!!document.querySelector('form')`), role === 'admin', 'Formulario Admin');
+        if (route.endsWith('/editar') || route.endsWith('/nuevo')) assert.equal(await evaluate(`!!document.querySelector('main form')`), role === 'admin', 'Formulario Admin');
         const tabs = route.startsWith('/oportunidades/demo-') ? ['Historial', 'Seguimiento', 'Conversación'] : route.startsWith('/clientes/demo-') ? ['Recontactos', 'Compras', 'Consultas'] : [];
         for (const tab of tabs) { await click(tab); await check(`${width} ${route} ${role} ${tab}`); }
+      }
+      if (role === 'admin') {
+        await go('/usuarios');
+        await until(`!!document.querySelector('.users-table')`);
+        await check(`${width} usuarios admin`);
+        assert.match(await evaluate('document.querySelector("main").textContent'), /Vendedor Demo/);
+        if (width === 1440 || width === 390) await capture(`usuarios-${width}`);
+      } else {
+        await send('Page.navigate', { url: base + '/usuarios' });
+        await until(`location.pathname === '/acceso-denegado' && !!document.querySelector('h1')`);
+        assert.equal(await evaluate(`!!document.querySelector('.users-table')`), false, 'Vendedor no recibe lista de usuarios por URL');
+        assert.equal(await evaluate(`document.body.textContent.includes(${JSON.stringify(credentials.DEMO_ADMIN_EMAIL)})`), false, 'No se revela correo del administrador');
       }
     }
     await go('/');
@@ -155,10 +215,33 @@ try {
   await go('/clientes/demo-bruno');
   assert.deepEqual(await evaluate(`[...document.querySelectorAll('.metric > strong')].map(el => el.textContent)`), ['1', '4', '1', '1']);
   await go('/vehiculos/demo-corolla');
-  await change('#preview-role', 'admin');
   await evaluate(`document.querySelector('a[href="/vehiculos/demo-corolla/editar"]').click()`);
   await until(`location.pathname.endsWith('/editar') && !!document.querySelector('form')`);
   assert.equal(await evaluate(`document.querySelector('input[name=marca]').value`), 'Toyota');
+  await go('/usuarios');
+  await until(`!!document.querySelector('.users-table')`);
+  await click('Editar');
+  await until(`!!document.querySelector('dialog[open] input[name=full_name]')`);
+  const incompleteContact = await evaluate(`!document.querySelector('input[name=contact_phone]').value || !document.querySelector('input[name=contact_email]').value`);
+  await evaluate(`document.querySelector('.user-editor-form').requestSubmit()`);
+  if (incompleteContact) {
+    await until(`!!document.querySelector('.user-editor-form .field-error')`);
+    await click('Cancelar');
+  } else {
+    await until(`document.querySelector('.user-editor-success [role=status]')?.textContent.includes('actualizados')`);
+    await click('Volver al equipo');
+  }
+  await click('Crear vendedor');
+  await until(`!!document.querySelector('dialog[open] input[name=email]')`);
+  await change('input[name=email]', credentials.DEMO_SELLER_EMAIL);
+  await change('.user-editor-form input[name=full_name]', 'Vendedor Demo');
+  await change('input[name=contact_email]', credentials.DEMO_SELLER_EMAIL);
+  await change('input[name=contact_phone]', '+5491112345678');
+  await change('input[name=password]', credentials.DEMO_SELLER_PASSWORD);
+  await evaluate(`document.querySelector('.user-editor-form').requestSubmit()`);
+  await until(`[...document.querySelectorAll('[role=alert]')].some(el => el.textContent.includes('No se pudo crear'))`);
+  await evaluate(`document.querySelector('input[name=password]').value = ''`);
+  await click('Cancelar');
   if (hmr) {
     await go('/');
     originalCss = await readFile(cssPath, 'utf8');
@@ -173,7 +256,10 @@ try {
   await writeFile(join(output, 'report.json'), JSON.stringify({ assertions, errors }, null, 2));
   assert.deepEqual([...new Set(errors.map((error) => error.split('\n')[0]))], [], 'Errores de consola/hidratación (detalle en report.json)');
   console.log(JSON.stringify({ assertions, mode: hmr ? 'dev + HMR' : 'build', errors, screenshots: output }));
+  await click('Salir');
+  await until(`location.pathname === '/login'`);
   await send('Browser.close');
+  }
 } finally {
   if (originalCss !== undefined) await writeFile(cssPath, originalCss);
   for (const call of pending.values()) clearTimeout(call.timer);

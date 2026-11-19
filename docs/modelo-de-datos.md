@@ -1,220 +1,437 @@
-# Modelo de datos propuesto — Pelucars
+# Modelo de datos vigente — Pelucars backend V1
 
-Estado: diseño para revisión, 17 de noviembre de 2026. Este documento no crea tablas, migraciones, SQL, RLS, usuarios ni datos. El destino previsto es PostgreSQL de Supabase; no se realizó ninguna conexión. Las reglas que necesitan confirmación se identifican en [decisiones.md](decisiones.md).
+Fuente: [modelo recibido](referencias/modelo-backend-v1-2026-11-19.md), reconciliado con las conclusiones del [alcance V2](referencias/alcance-v2-2026-11-19.md). Los originales se conservan sin editar. El [diseño del 17/11](historico/modelo-de-datos-2026-11-17.md) es histórico y ya no define esta etapa.
 
-## Conceptos y límites
+Implementación del 19/11/2026: identidad (`profiles`, `user_admin_events`) aplicada en Supabase, autenticación y administración básica de vendedores implementadas. La migración y sus pruebas están en `supabase/`; los resultados de ejecución remota se registran en [autenticacion.md](autenticacion.md). El resto del modelo sigue siendo diseño, no tablas ya creadas.
 
-- **Cliente:** identidad comercial persistente. Puede tener muchas consultas y muchas compras.
-- **Oportunidad / consulta:** una intención comercial individual de ese cliente. No equivale a un mensaje ni necesariamente a una conversación completa. Cuándo abrir otra consulta o reabrir una existente sigue pendiente.
-- **Conversación:** hilo de comunicación por canal. Puede atravesar varias oportunidades del mismo cliente; los mensajes se conservan una sola vez.
-- **Mensaje:** unidad de comunicación con emisor identificado. Un mensaje no incrementa automáticamente el contador de consultas o recontactos.
-- **Actividad:** nota o tarea del vendedor, incluido un recontacto programado. **Intento de recontacto:** acción de contacto efectivamente realizada, con resultado; puede producir cero, uno o varios mensajes. Programar, reprogramar o cancelar una tarea no crea un intento.
-- **Recepción inicial:** episodio que delimitará el futuro máximo de tres mensajes salientes del bot. Su frontera temporal y los casos de reingreso necesitan definición; no se usa el total de mensajes del cliente como sustituto.
-- **Compra:** operación histórica independiente del estado actual de una oportunidad o del inventario. No se elimina al cerrar una consulta ni al dar de baja un vehículo.
+---
 
-Los vehículos serán administrados desde el frontend y guardados en Supabase como fuente de verdad interna. La existencia de una API externa no implica sincronización, consulta ni dependencia de ella.
+Actualizado el 19 de noviembre de 2026. Modelo para Supabase PostgreSQL, alineado con V1 de Pelucars. Incluye entidades, campos, permisos y operaciones necesarias para comenzar el backend. Sólo la etapa de identidad indicada arriba está aplicada; los módulos comerciales permanecen como propuesta.
 
-## Diagrama entidad-relación
+La separación entre catálogo y unidades físicas es la principal decisión de diseño propuesta. El negocio necesita conservar qué se busca aunque no exista stock y qué unidad concreta se vende. Las reglas pendientes de disponibilidad, retorno al bot e integración externa se mantienen como decisiones, sin valores arbitrarios.
 
-Los atributos muestran claves principales; el diccionario siguiente especifica el resto. Las relaciones opcionales se indican con `o|` u `o{`.
+# Conceptos del modelo
+
+| Concepto | Qué representa |
+| --- | --- |
+| Cliente | Persona identificada inicialmente por teléfono. Puede tener varias búsquedas. |
+| Oportunidad | Una búsqueda u operación comercial del cliente, con responsable y resultado propios. |
+| Vehículo de catálogo | Modelo identificable, por ejemplo Toyota Hilux. Existe aunque nunca haya habido una unidad en inventario. |
+| Unidad de inventario | Auto físico concreto: Hilux 2022, determinada versión, kilometraje, precio y estado. |
+| Interés | Modelo o características que busca el cliente. Persiste aunque compre una alternativa. |
+| Oferta | Vehículo alternativo o unidad que propone el vendedor; puede estar pendiente, aceptada o rechazada. |
+| Venta | Resultado confirmado asociado a la unidad física vendida y a la oportunidad. |
+| Actividad | Acción manual del vendedor, incluido cada intento de recontacto. |
+| Evaluación de score | Puntaje completo calculado en un momento y con una versión de reglas. |
+| Evidencia | Fragmento de mensaje y señal que explican esa evaluación. |
+
+Una ficha Toyota Hilux sin unidades se muestra Sin stock, sin precio ni moneda. No se crea una unidad falsa con cantidad cero. Si ingresan dos Hilux, se agregan dos unidades. Si se vende una, la otra puede seguir disponible.
+
+En esta propuesta, el catálogo agrupa por marca y modelo; año, versión y transmisión exactos pertenecen a las unidades. Los rangos deseados pertenecen al interés de la oportunidad. Esto admite búsquedas como Hilux sin año definido y evita inventar especificaciones.
+
+# Relaciones principales
 
 ```mermaid
 erDiagram
-  IDENTIDAD_AUTH ||--o| PERFILES : identifica
-  PERFILES ||--o{ USUARIO_ZONA : integra
-  ZONAS ||--o{ USUARIO_ZONA : agrupa
-  ZONAS o|--o{ CLIENTES : referencia
-  ZONAS o|--o{ OPORTUNIDADES : corresponde
-  CLIENTES ||--o{ CONTACTOS_CLIENTE : posee
-  CLIENTES ||--o{ OPORTUNIDADES : consulta
-  CLIENTES ||--o{ CONVERSACIONES : mantiene
-  OPORTUNIDADES ||--o{ OPORTUNIDAD_CONVERSACION : vincula
-  CONVERSACIONES ||--o{ OPORTUNIDAD_CONVERSACION : incluye
-  CONVERSACIONES ||--o{ MENSAJES : contiene
-  OPORTUNIDADES o|--o{ MENSAJES : contextualiza
-  CLIENTES o|--o{ MENSAJES : envia
-  PERFILES o|--o{ MENSAJES : envia
-  CONVERSACIONES ||--o{ RECEPCIONES : recibe
-  OPORTUNIDADES ||--o{ RECEPCIONES : origina
-  RECEPCIONES o|--o{ MENSAJES : agrupa
-  OPORTUNIDADES ||--o{ INTERESES_VEHICULO : expresa
-  VEHICULOS ||--o{ INTERESES_VEHICULO : interesa
-  MONEDAS ||--o{ VEHICULOS : cotiza
-  MONEDAS o|--o{ OPORTUNIDADES : presupuesta
-  ESTADOS_OPORTUNIDAD ||--o{ OPORTUNIDADES : clasifica
-  PERFILES o|--o{ OPORTUNIDADES : responsable_actual
-  OPORTUNIDADES ||--o{ HISTORIAL_ASIGNACIONES : registra
-  PERFILES o|--o{ HISTORIAL_ASIGNACIONES : responsable_o_autor
-  OPORTUNIDADES ||--o{ HISTORIAL_ESTADOS : registra
-  ESTADOS_OPORTUNIDAD ||--o{ HISTORIAL_ESTADOS : destino
-  PERFILES o|--o{ HISTORIAL_ESTADOS : autor
-  OPORTUNIDADES ||--o{ EVALUACIONES_SCORE : evalua
-  EVALUACIONES_SCORE ||--o{ EVIDENCIAS_SCORE : justifica
-  MENSAJES ||--o{ EVIDENCIAS_SCORE : fundamenta
-  OPORTUNIDADES ||--o{ ACTIVIDADES : planifica
-  PERFILES ||--o{ ACTIVIDADES : autor_y_responsable
-  OPORTUNIDADES ||--o{ INTENTOS_RECONTACTO : recibe
-  ACTIVIDADES o|--o{ INTENTOS_RECONTACTO : origina
-  PERFILES ||--o{ INTENTOS_RECONTACTO : realiza
-  INTENTOS_RECONTACTO ||--o{ RECONTACTO_MENSAJE : vincula
-  MENSAJES ||--o| RECONTACTO_MENSAJE : documenta
-  CLIENTES ||--o{ COMPRAS : realiza
-  OPORTUNIDADES o|--o{ COMPRAS : convierte
-  PERFILES o|--o{ COMPRAS : registra
-  MONEDAS ||--o{ COMPRAS : expresa
-  COMPRAS ||--|{ COMPRA_ITEMS : contiene
-  VEHICULOS o|--o{ COMPRA_ITEMS : referencia
-
-  PERFILES { uuid id PK }
-  ZONAS { uuid id PK }
-  USUARIO_ZONA { uuid id PK }
-  CLIENTES { uuid id PK }
-  CONTACTOS_CLIENTE { uuid id PK }
-  OPORTUNIDADES { uuid id PK }
-  ESTADOS_OPORTUNIDAD { text codigo PK }
-  MONEDAS { char codigo PK }
-  VEHICULOS { uuid id PK }
-  INTERESES_VEHICULO { uuid oportunidad_id PK,FK
-    uuid vehiculo_id PK,FK }
-  CONVERSACIONES { uuid id PK }
-  OPORTUNIDAD_CONVERSACION { uuid oportunidad_id PK,FK
-    uuid conversacion_id PK,FK }
-  RECEPCIONES { uuid id PK }
-  MENSAJES { uuid id PK }
-  EVALUACIONES_SCORE { uuid id PK }
-  EVIDENCIAS_SCORE { uuid id PK }
-  ACTIVIDADES { uuid id PK }
-  INTENTOS_RECONTACTO { uuid id PK }
-  RECONTACTO_MENSAJE { uuid mensaje_id PK,FK }
-  HISTORIAL_ASIGNACIONES { uuid id PK }
-  HISTORIAL_ESTADOS { uuid id PK }
-  COMPRAS { uuid id PK }
-  COMPRA_ITEMS { uuid id PK }
+    PROFILES ||--o{ LEADS : responsable
+    CUSTOMERS ||--o{ LEADS : inicia
+    LEADS ||--o{ LEAD_INTERESTS : busca
+    VEHICLES o|--o{ LEAD_INTERESTS : modelo
+    VEHICLES ||--o{ INVENTORY_UNITS : unidades
+    LEADS ||--o{ LEAD_OFFERS : recibe
+    VEHICLES ||--o{ LEAD_OFFERS : ofrecido
+    INVENTORY_UNITS o|--o{ LEAD_OFFERS : unidad_opcional
+    LEADS ||--o{ CONVERSATIONS : contiene
+    CONVERSATIONS ||--o{ MESSAGES : registra
+    LEADS ||--o{ SCORE_EVALUATIONS : evalua
+    SCORE_EVALUATIONS ||--o{ SCORE_EVIDENCE : explica
+    MESSAGES ||--o{ SCORE_EVIDENCE : respalda
+    LEADS ||--o{ ACTIVITIES : seguimiento
+    LEADS ||--o{ LEAD_ASSIGNMENTS : asignaciones
+    LEADS ||--o{ LEAD_STATUS_HISTORY : cambios
+    LEADS ||--o| SALES : resultado
+    INVENTORY_UNITS ||--o| SALES : vendida
+    PROFILES ||--o{ USER_ADMIN_EVENTS : actor
 ```
 
-## Convenciones del diccionario
+Las cardinalidades de venta representan V1: una venta confirmada por oportunidad y por unidad. Operaciones con varios vehículos, recompra y anulaciones requieren definir su tratamiento antes de ampliar esa restricción.
 
-`?` significa nullable; los demás campos son obligatorios. `PK` es clave primaria, `FK` clave foránea, `UQ` unicidad. Todas las tablas con `id` usan UUID PK, salvo la identidad externa, cuya clave pertenece al proveedor futuro. Todas las tablas de dominio incorporan `creado_en timestamptz`; las editables incorporan además `actualizado_en timestamptz`. Las tablas puente sólo requieren `creado_en`, salvo `usuario_zona`, que conserva vigencia. Los eventos, mensajes, evaluaciones, evidencias y compras históricas se proponen inmutables, con correcciones explícitas y auditadas en la etapa futura.
+# Convenciones y estados
 
-Fechas en UTC mediante `timestamptz`; presentación local en America/Buenos_Aires. Importes en `numeric(14,2)`, nunca punto flotante. Moneda explícita en toda cantidad monetaria. `text` con valores controlados significa catálogo/restricción futura, no un enum instalado. Las FK no implican borrados en cascada.
+- Identificadores UUID; fechas y horas timestamptz, guardadas de forma consistente y mostradas en America/Buenos_Aires.
+- Tablas mutables con created_at y updated_at. Historiales y evaluaciones se agregan sin sobrescribir eventos anteriores.
+- Campos no conocidos usan NULL; no sustituirlos por cero, cadena vacía o valores inventados.
+- Importes numeric(14,2), con moneda char(3). Presupuesto opcional; importe final de una venta confirmada, obligatorio.
+- Claves foráneas para las relaciones; evitar borrado en cascada de usuarios, catálogo o clientes que destruya la historia.
+- La base valida códigos, importes y relaciones, además de la validación del frontend.
+- V1 no incluye tablas de zonas, sucursales, fotos, dashboards ni reglas de score editables por el usuario.
 
-### Identidad, roles y zonas
+Estados comerciales confirmados: new_inquiry, follow_up, sold, lost, awaiting_stock. Etiquetas: Nueva consulta, En seguimiento, Vendido, Perdido y En espera de stock.
 
-| Tabla | Campos propuestos y claves | Relaciones / restricciones |
+Estado de atención propuesto, independiente del comercial: queued, assigned, in_progress, released. Permite preparar la capacidad de asignación sin asumir que una oportunidad comercial abierta ocupa al vendedor indefinidamente. El evento que libera sigue pendiente.
+
+Estados de unidad propuestos para V1: available, sold, withdrawn. Withdrawn representa retirada del inventario utilizable sin borrarla. Reservas no se incorporan automáticamente: requieren confirmar una funcionalidad de reserva.
+
+# Usuarios y clientes
+
+## profiles
+
+| Campo | Tipo | Uso |
 | --- | --- | --- |
-| `perfiles` | `id uuid PK/FK → identidad_auth.id`; `nombre text`; `rol text`; `activo boolean`; `disponibilidad text`; `disponibilidad_actualizada_en timestamptz?` | Roles `admin` y `vendedor`. Disponibilidad propuesta: disponible, ocupado, desconectado; semántica a confirmar. Dos administradores iniciales son una condición de arranque futura, no un máximo ni registros a crear ahora. |
-| `zonas` | `id`; `codigo text UQ`; `nombre text`; `descripcion text?`; `activa boolean` | Identificador estable y descripción libre. Sin polígonos, radios, códigos postales ni jerarquía obligatorios hasta definir qué significa zona. |
-| `usuario_zona` | `id`; `usuario_id uuid FK → perfiles`; `zona_id uuid FK → zonas`; `desde timestamptz`; `hasta timestamptz?`; `asignado_por uuid FK → perfiles` | N:M, admite varias zonas por vendedor como propuesta. No intervalos superpuestos para el mismo par; hasta posterior a desde. Conservar pertenencias pasadas. |
+| id | uuid PK y FK a auth.users | Identidad de acceso. |
+| full_name | text, requerido | Nombre del usuario. |
+| role | text, requerido | admin o seller; modificación privilegiada. |
+| contact_phone | text, requerido para vendedores | Teléfono internacional E.164; obligatorio al crear y editar, también en demo. |
+| contact_email | text, requerido para vendedores | Correo de contacto personal o laboral; puede coincidir con el de acceso. |
+| is_enabled | boolean, requerido | Cuenta habilitada; deshabilitar no borra historial. |
+| accepts_assignments | boolean, requerido | Disponibilidad operativa, distinta de la habilitación y de la carga. |
+| created_at, updated_at | timestamptz | Trazabilidad básica. |
 
-La identidad de autenticación aparece sólo como referencia de diseño; no se implementa auth. Un Admin que también venda requiere confirmar elegibilidad para asignaciones; el rol administrativo no lo vuelve automáticamente vendedor disponible.
+El correo de acceso se administra con Supabase Auth como fuente única. El correo de contacto se guarda en `profiles.contact_email` y será el destinatario para las futuras comunicaciones comerciales al vendedor; cambiarlo no modifica Auth. No se exige que sea único ni distinto del correo de acceso. Ambos son visibles sólo para el propio usuario y administradores. No almacenar contraseñas en profiles.
 
-### Clientes, oportunidades e inventario
+La migración `20261119154713_seller_contact_details.sql` agrega el contacto separado y exige ambos datos en nuevas altas y ediciones de vendedores. Las cuentas previas conservan los NULL históricos y su habilitación: no se inventan contactos. La restricción `seller_contact_required` se crea `NOT VALID` para no invalidar esas filas, pero se aplica a toda escritura nueva. Una vez completadas, validar la restricción mediante otra migración. Los administradores no están sujetos a esta obligación comercial.
 
-| Tabla | Campos propuestos y claves | Relaciones / restricciones |
+La creación, edición de correo y deshabilitación de vendedores se hacen mediante backend autenticado que verifica rol admin. Credenciales administrativas de Supabase nunca llegan al navegador. Los usuarios no pueden cambiar su propio rol mediante updates directos.
+
+## user_admin_events
+
+id uuid PK; subject_user_id uuid FK profiles; actor_id uuid FK profiles; action text; changed_fields jsonb con valores anteriores/nuevos permitidos; occurred_at timestamptz.
+
+Registra alta, edición y habilitación/deshabilitación. Solo administradores lo consultan. No guarda contraseñas, tokens ni secretos. Evita que una modificación de usuario borre su identidad histórica.
+
+## customers
+
+id uuid PK; full_name text NULL; phone_e164 text UNIQUE requerido; created_at y updated_at timestamptz.
+
+Sin email de cliente en V1. El nombre puede no conocerse al llegar el primer mensaje. El teléfono normalizado evita duplicados básicos; teléfonos compartidos, reemplazos y fusión de clientes son excepciones que requieren procedimiento.
+
+La asignación pertenece a la oportunidad, no a customers. El responsable anterior se consulta en el historial; falta decidir cómo elegirlo cuando hubo varios.
+
+# Catálogo e inventario
+
+## vehicles
+
+| Campo | Tipo | Uso |
 | --- | --- | --- |
-| `clientes` | `id`; `nombre text?`; `zona_id uuid? FK → zonas`; `notas text?`; `archivado_en timestamptz?` | Nombre y zona pueden faltar durante recepción. Un cliente agrupa todo su historial. No contiene score, responsable comercial ni un único vehículo de interés. |
-| `contactos_cliente` | `id`; `cliente_id uuid FK → clientes`; `tipo text`; `valor_original text`; `valor_normalizado text`; `principal boolean`; `verificado_en timestamptz?`; `baja_en timestamptz?` | Teléfono/correo/identificador de canal. UQ por cliente, tipo y valor normalizado; a lo sumo un contacto principal activo por cliente y tipo. No imponer unicidad global de teléfono sin resolver teléfonos compartidos, reciclados y fusión de clientes. |
-| `estados_oportunidad` | `codigo text PK`; `nombre text`; `es_terminal boolean`; `orden smallint`; `activo boolean` | Catálogo comercial por acordar. La bandeja En espera expresa falta de responsable, no obliga a inventar un estado comercial. |
-| `oportunidades` | `id`; `cliente_id uuid FK → clientes`; `zona_id uuid? FK → zonas`; `responsable_id uuid? FK → perfiles`; `estado_codigo text FK → estados_oportunidad`; `interes_texto text?`; `presupuesto numeric(14,2)?`; `moneda_codigo char(3)? FK → monedas`; `plazo_compra_texto text?`; `origen text`; `abierta_en timestamptz`; `cerrada_en timestamptz?`; `version integer` | Muchas oportunidades por cliente. Responsable inicialmente nulo. Zona de la consulta separada de zona del cliente. Presupuesto y moneda ambos presentes o ambos ausentes; presupuesto no negativo. Versionado para concurrencia futura. |
-| `monedas` | `codigo char(3) PK`; `nombre text`; `activa boolean` | Códigos ISO de tres letras. ARS y USD son opciones visuales propuestas, sin catálogo creado. |
-| `vehiculos` | `id`; `marca text`; `modelo text`; `version text?`; `anio smallint`; `precio numeric(14,2)`; `moneda_codigo char(3) FK → monedas`; `stock integer`; `creado_por uuid FK → perfiles`; `actualizado_por uuid FK → perfiles`; `baja_en timestamptz?`; `baja_por uuid? FK → perfiles`; `motivo_baja text?`; `revision integer` | Precio ≥ 0, stock entero ≥ 0; año válido con rango pendiente. No UQ marca/modelo/versión/año hasta definir si representa unidad o agrupación. Baja lógica. Precio/stock cero son valores reales; no sustituyen información ausente en la interfaz. |
-| `intereses_vehiculo` | `oportunidad_id uuid PK/FK → oportunidades`; `vehiculo_id uuid PK/FK → vehiculos`; `nota text?` | N:M: una oportunidad puede comparar varios vehículos. El interés libre permite consultas aunque el inventario no tenga el vehículo solicitado. |
+| id | uuid PK | Ficha de catálogo. |
+| brand, model | text, requeridos | Marca y modelo identificados. |
+| normalized_key | text UNIQUE | Clave normalizada marca/modelo para deduplicación. |
+| origin | text | admin o intake; trazabilidad del origen. |
+| needs_review | boolean | Indica identificación automática que requiere revisión. |
+| created_by | uuid FK profiles, nullable | Administrador creador; vacío para automatización. |
+| archived_at | timestamptz NULL | Retira la ficha de vistas habituales conservando relaciones. |
+| created_at, updated_at | timestamptz | Fechas. |
 
-`revision` y `version` son contadores técnicos de concurrencia; no son mensajes, consultas ni intentos. Desactivar un vehículo o perfil no elimina referencias históricas. Las ediciones de precio/stock serán internas, sin sobrescrituras desde una API externa.
+No tiene precio, moneda ni booleano de stock editable: se obtienen de sus unidades. Una ficha sin unidades devuelve precio y moneda NULL y stock disponible 0 en la proyección del frontend.
 
-### Conversaciones, recepción y mensajes
+La automatización de ingreso puede crear fichas mediante una operación restringida. Esto no concede a los vendedores ABM del catálogo. Reutiliza coincidencias normalizadas; no fusiona modelos diferentes por una similitud incierta.
 
-| Tabla | Campos propuestos y claves | Relaciones / restricciones |
+Si no hay identificación suficiente (por ejemplo solo automático 2021), se conserva el texto y los criterios en lead_interests sin FK a catálogo. Para Toyota Hilux sin año sí se puede crear/reutilizar el modelo; no se inventa versión ni año.
+
+## inventory_units
+
+| Campo | Tipo | Uso |
 | --- | --- | --- |
-| `conversaciones` | `id`; `cliente_id uuid FK → clientes`; `canal text`; `proveedor text?`; `cuenta_canal text?`; `hilo_externo_id text?`; `iniciada_en timestamptz`; `cerrada_en timestamptz?` | Hilo de un cliente, no conversación ficticia. Si existe identidad externa completa, UQ por proveedor, cuenta e hilo. |
-| `oportunidad_conversacion` | `oportunidad_id uuid PK/FK → oportunidades`; `conversacion_id uuid PK/FK → conversaciones` | Ambos pertenecen al mismo cliente. Una conversación puede contener consultas sucesivas; no duplicar los mensajes. |
-| `recepciones` | `id`; `oportunidad_id uuid FK → oportunidades`; `conversacion_id uuid FK → conversaciones`; `iniciada_en timestamptz`; `finalizada_en timestamptz?`; `derivada_en timestamptz?`; `motivo_derivacion text?` | El par oportunidad/conversación debe existir en el puente. Delimita el presupuesto de tres mensajes del bot; no almacena un contador de consultas. |
-| `mensajes` | `id`; `conversacion_id uuid FK → conversaciones`; `oportunidad_id uuid? FK → oportunidades`; `recepcion_id uuid? FK → recepciones`; `emisor_tipo text`; `emisor_cliente_id uuid? FK → clientes`; `emisor_usuario_id uuid? FK → perfiles`; `emisor_servicio text?`; `direccion text`; `tipo_contenido text`; `texto_original text?`; `contenido_hash text?`; `referencia_adjunto text?`; `fecha_origen timestamptz?`; `registrado_en timestamptz`; `proveedor_mensaje_id text?`; `estado_entrega text?`; `secuencia_bot smallint?`; `version_de_id uuid? FK → mensajes` | Mensaje original conservado, con autor y contexto. Hash identifica la versión de contenido. Una corrección/edición externa se registra como nueva versión referenciada; no cambia el texto usado por una evidencia. UQ externa por conversación/proveedor_mensaje_id cuando exista; identidad externa exacta por confirmar. |
+| id | uuid PK | Identidad de la unidad física. |
+| vehicle_id | uuid FK vehicles, requerido | Modelo al que pertenece. |
+| internal_code | text UNIQUE, requerido | Identificador interno de stock. |
+| model_year | smallint NULL hasta completar | Año real, no el deseado por el cliente. |
+| version, transmission | text NULL | Características conocidas. |
+| mileage_km | integer NULL | Kilometraje no negativo. |
+| listed_price | numeric(14,2) NULL | Precio publicado vigente, mayor que cero cuando existe. |
+| currency | char(3) NULL | Obligatoria junto con el precio; ambos nulos o ambos informados. |
+| status | text, requerido | available, sold o withdrawn. |
+| received_at | timestamptz NULL | Ingreso registrado al inventario. |
+| created_at, updated_at | timestamptz | Fechas. |
 
-Restricciones previstas:
+Un registro representa una unidad real, no una cantidad por modelo. Marca/modelo vienen de vehicles. Si el importe no está informado, el panel lo indica; el precio de venta final sí debe informarse al confirmar.
 
-1. Emisor `cliente`: sólo `emisor_cliente_id`, coincidente con el cliente de la conversación, dirección entrante. Emisor `usuario`: sólo `emisor_usuario_id`, dirección saliente. Emisor `bot` o `sistema`: sólo `emisor_servicio`, con identificador/versionado del servicio; `sistema` admite dirección interna. No identificar al emisor humano mediante su nombre libre. Su rol actual no altera quién envió un mensaje pasado.
-2. Mensajes con oportunidad requieren el vínculo oportunidad/conversación; si llevan recepción, conversación y oportunidad deben coincidir con ella. Los mensajes sin oportunidad permanecen visibles en el historial del cliente, sin adjudicación comercial inventada.
-3. Al menos texto o referencia de adjunto según tipo; un adjunto no inventa una transcripción. No diseñar URLs públicas de información personal. Para preservar ediciones del proveedor sin chocar con la identidad externa, agregar `version_num integer` positivo: unicidad por conversación, ID externo y versión. `version_de_id` apunta siempre al mensaje original (nulo sólo en el original), con misma conversación, oportunidad, recepción y emisor; no admite ciclos. La unicidad externa mencionada en la tabla aplica al mensaje lógico original, y las versiones se distinguen por este número. Una edición no reserva otra secuencia del bot: esa secuencia pertenece sólo al original. La evidencia referencia el ID de la versión exacta evaluada.
-4. Para salidas iniciales del bot: recepción obligatoria y `secuencia_bot` entre 1 y 3, única por recepción. Una futura reserva atómica de esos lugares evita superar el presupuesto bajo concurrencia. Un reintento de transporte reutiliza la identidad y posición del mensaje lógico; no agrega otro mensaje saliente. Una vez enviado, no se libera su lugar. La política exacta ante fallos y nuevas recepciones necesita revisión.
-5. El máximo es **tres**, no una obligación de enviar tres. Aun cuando el score sea bajo, toda consulta comercial se deriva a un vendedor. Mostrar catálogo o responder precio/stock no corresponde al bot en esta etapa. Estas restricciones son de diseño; no hay bot, envío ni automatización implementados.
+La ficha agregada se considera En stock si tiene al menos una unidad available; Sin stock si no tiene ninguna. No tratar unidades sold o withdrawn como disponibles. No sumar precios en monedas diferentes ni mostrar un único precio si hay unidades con importes distintos.
 
-### Score y evidencia trazable
+La referencia del sistema externo y su identidad se definirán tras la reunión de integración. No asumir un external_id obligatorio ni crear un sincronizador ahora.
 
-| Tabla | Campos propuestos y claves | Relaciones / restricciones |
+# Oportunidad e interés
+
+## leads
+
+| Campo | Tipo | Uso |
 | --- | --- | --- |
-| `evaluaciones_score` | `id`; `oportunidad_id uuid FK → oportunidades`; `evaluada_en timestamptz`; `version_reglas text`; `valor numeric(8,2)`; `escala_min numeric(8,2)`; `escala_max numeric(8,2)`; `explicacion text?`; `origen text`; `autor_usuario_id uuid? FK → perfiles`; `autor_servicio text?`; `sustituye_id uuid? FK → evaluaciones_score` | Múltiples evaluaciones históricas; valor dentro de su escala, min < max. No fijar 0–100 ni umbrales. Autor usuario o servicio, no ambos. Sustitución dentro de la misma oportunidad y sin ciclos. |
-| `evidencias_score` | `id`; `evaluacion_id uuid FK → evaluaciones_score`; `mensaje_id uuid FK → mensajes`; `criterio_codigo text`; `fragmento text`; `inicio integer`; `fin integer`; `contenido_hash text`; `justificacion text`; `aporte numeric(8,2)?` | Una evidencia enlaza un fragmento original, no sólo una explicación generada. Varias por evaluación y mensaje. Aporte opcional: no asumir que el score es aditivo. |
+| id | uuid PK | Oportunidad. |
+| customer_id | uuid FK customers, requerido | Cliente. |
+| assigned_to | uuid FK profiles NULL | Responsable actual; NULL en pendientes. |
+| source | text | whatsapp_bot en el flujo de ingreso actual. |
+| commercial_status | text, requerido | Uno de los cinco estados. |
+| attention_state | text, requerido | Estado operativo propuesto; regla de liberación pendiente. |
+| summary | text NULL | Resumen privado de la necesidad. |
+| budget_min, budget_max | numeric(14,2) NULL | Presupuesto declarado, no inferido. |
+| budget_currency | char(3) NULL | Requerida si hay importe; no convertir monedas automáticamente. |
+| financing_needed | boolean NULL | Sí, no o desconocido. |
+| trade_in_details | text NULL | Usado ofrecido, sin incorporarlo al stock. |
+| purchase_timeframe | text NULL | Plazo expresado por el cliente. |
+| waiting_since | timestamptz NULL | Inicio de la espera para ordenar la cola. |
+| attention_started_at, attention_released_at | timestamptz NULL | Hitos operativos, cuando correspondan. |
+| closed_at | timestamptz NULL | Cierre vendido/perdido. En espera de stock permanece abierto. |
+| loss_reason | text NULL | Motivo de pérdida; no equivale a falta de stock con interés vigente. |
+| created_at, updated_at | timestamptz | Fechas. |
 
-El mensaje debe pertenecer a la misma oportunidad de la evaluación, a través de su contexto validado. Para usar mensajes previos de otra consulta se requiere una decisión explícita, no sólo que el cliente coincida. `inicio` inclusivo y `fin` exclusivo, medidos en puntos de código Unicode del texto exacto guardado (no índices UTF-16 de JavaScript). Validar `0 ≤ inicio < fin ≤ longitud`, coincidencia exacta del fragmento y del hash. El frontend futuro convertirá índices al renderizar. No generar evidencias para contenido inexistente o una transcripción sin versión original conservada.
+Checks: presupuestos no negativos; mínimo no mayor que máximo; estado válido. La coherencia de cierre, venta y atención se valida en operaciones del backend y restricciones de base.
 
-La evaluación vigente se determinará por su secuencia de sustitución y fecha; conservar las anteriores. Un resultado cero y la ausencia de evaluación son distintos. En esta entrega la interfaz muestra “Sin evaluación”, sin cálculos.
+No imponer una única oportunidad abierta por cliente: el negocio admite varias búsquedas. Tampoco crear nuevas oportunidades para cada mensaje. Un cliente recurrente puede originar una nueva sin reabrir ni sobrescribir la anterior.
 
-### Seguimiento e historial
+El score actual se obtiene de la última evaluación válida, no de un campo editable por el vendedor. Las consultas de detalle, summary, interés y presupuesto se restringen al responsable actual/admin.
 
-| Tabla | Campos propuestos y claves | Relaciones / restricciones |
+## lead_interests
+
+id uuid PK; lead_id uuid FK leads requerido; vehicle_id uuid FK vehicles NULL; requested_text text requerido; year_min y year_max smallint NULL; requested_version y transmission text NULL; is_primary boolean; status text (active, replaced); created_at y updated_at timestamptz.
+
+Conserva modelo y características buscadas. Un índice parcial permite como máximo un interés primario activo por oportunidad; admite alternativas expresadas por el cliente. Año mínimo no supera al máximo.
+
+Un cambio real de búsqueda se registra marcando el interés anterior como replaced y agregando el nuevo, conservando el texto original. Comprar una alternativa no reemplaza la búsqueda original: se registra en ofertas y venta.
+
+Esta tabla reemplaza la relación simple lead_vehicles del diseño anterior, porque necesitamos guardar también búsquedas genéricas y criterios.
+
+# Ofertas y venta
+
+## lead_offers
+
+id uuid PK; lead_id uuid FK leads; vehicle_id uuid FK vehicles requerido; inventory_unit_id uuid FK inventory_units NULL; offered_by uuid FK profiles; response text (pending, accepted, rejected); response_note text NULL; offered_at timestamptz; responded_at timestamptz NULL.
+
+Registra alternativas propuestas manualmente por el vendedor. Si especifica una unidad, su vehicle_id debe coincidir con el de la oferta. Puede proponerse un modelo y elegir la unidad física más adelante. Una aceptación no equivale por sí sola a una venta.
+
+## sales
+
+| Campo | Tipo | Uso |
 | --- | --- | --- |
-| `actividades` | `id`; `oportunidad_id uuid FK → oportunidades`; `tipo text`; `autor_id uuid FK → perfiles`; `responsable_id uuid FK → perfiles`; `detalle text`; `programada_en timestamptz?`; `completada_en timestamptz?`; `cancelada_en timestamptz?` | Tipos propuestos: nota, tarea, recontacto programado. Las tareas programadas llevan fecha; una nota no requiere agenda. Completar/cancelar son excluyentes. Catálogo y reglas pendientes. |
-| `intentos_recontacto` | `id`; `oportunidad_id uuid FK → oportunidades`; `actividad_id uuid? FK → actividades`; `vendedor_id uuid FK → perfiles`; `realizado_en timestamptz`; `canal text`; `resultado text`; `detalle text?` | Registro del intento realizado aunque no haya respuesta ni mensaje. Actividad opcional para contactos espontáneos; si existe, misma oportunidad. Resultados normalizados a acordar. |
-| `recontacto_mensaje` | `mensaje_id uuid PK/FK → mensajes`; `intento_id uuid FK → intentos_recontacto` | Un intento puede agrupar varios mensajes; cada mensaje se atribuye como máximo a un intento para no duplicar contadores. Misma oportunidad y cliente. |
-| `historial_asignaciones` | `id`; `oportunidad_id uuid FK → oportunidades`; `secuencia integer`; `responsable_anterior_id uuid? FK → perfiles`; `responsable_nuevo_id uuid? FK → perfiles`; `actor_usuario_id uuid? FK → perfiles`; `actor_servicio text?`; `origen text`; `motivo text?`; `ocurrida_en timestamptz` | UQ oportunidad/secuencia. Origen propuesto: ingreso, toma voluntaria, manual Admin, automática futura, liberación. Ingreso puede tener ambos responsables nulos; en los demás cambios deben diferir. Autor humano o servicio identificado. |
-| `historial_estados` | `id`; `oportunidad_id uuid FK → oportunidades`; `secuencia integer`; `estado_anterior text? FK → estados_oportunidad`; `estado_nuevo text FK → estados_oportunidad`; `actor_usuario_id uuid? FK → perfiles`; `actor_servicio text?`; `motivo text?`; `ocurrida_en timestamptz` | UQ oportunidad/secuencia. Anterior nulo sólo en creación. Transiciones y motivos obligatorios por acordar. Eventos append-only, sin edición directa por vendedor. |
+| id | uuid PK | Venta confirmada. |
+| lead_id | uuid FK leads UNIQUE | Oportunidad que originó la venta. |
+| inventory_unit_id | uuid FK inventory_units UNIQUE | Unidad física vendida. |
+| offer_id | uuid FK lead_offers NULL | Oferta aceptada, si se registró una. |
+| seller_id | uuid FK profiles | Vendedor al que se atribuye la venta. |
+| recorded_by | uuid FK profiles | Persona que confirma; puede ser administrador. |
+| amount | numeric(14,2), requerido y positivo | Precio final, distinto del precio publicado. |
+| currency | char(3), requerido | Moneda de venta. |
+| sold_at, created_at | timestamptz | Fecha comercial y fecha de registro. |
 
-El responsable/estado actual de la oportunidad se conserva para lectura; en la implementación futura, su cambio y el evento histórico deberán ocurrir juntos, de manera atómica, validando la versión anterior. No permitir dos tomas concurrentes del mismo lead. Una reasignación no debe reasignar silenciosamente tareas existentes: esa política queda pendiente. El autor de un intento pasado permanece aunque cambie el responsable actual.
+La venta se confirma en una transacción: verifica permiso, bloquea unidad y oportunidad, comprueba disponibilidad, inserta la venta, marca la unidad sold y la oportunidad sold, y agrega el historial de estado con la evaluación de score de ese momento.
 
-### Compras anteriores
+Si hay offer_id, debe pertenecer a la misma oportunidad, estar aceptada y corresponder al mismo modelo/unidad vendida. Puede validarse con claves compuestas y lógica transaccional.
 
-| Tabla | Campos propuestos y claves | Relaciones / restricciones |
+No duplicar customer_id si se obtiene de la oportunidad. No cambiar la búsqueda de Hilux a Ranger al vender la alternativa. No permitir que un segundo vendedor venda la misma unidad.
+
+Anular/corregir ventas requiere una operación explícita pendiente de definir. No implementar retorno de stock por un cambio genérico de estado.
+
+# Conversaciones y mensajes
+
+## conversations
+
+id uuid PK; lead_id uuid FK leads; provider text; business_phone_id text; channel text; started_at timestamptz; ended_at timestamptz NULL; bot_state text (collecting, waiting_assignment, handed_off, stopped); bot_messages_count smallint entre 0 y 3; bot_stop_reason text NULL; handoff_at timestamptz NULL; handed_off_to uuid FK profiles NULL.
+
+La recepción agrupa mensajes y aplica el límite de tres envíos. El fin de la intervención del bot no prueba que el vendedor haya atendido ni que el cliente haya comprado. No presupone acceso a la conversación privada posterior.
+
+El contador no se reinicia por cada mensaje ni por un reintento del webhook. Una nueva búsqueda requiere una nueva decisión de ingreso según D07; conservar el enlace de cada mensaje a la conversación original.
+
+## messages
+
+id uuid PK; conversation_id uuid FK conversations; provider_message_id text NULL; provider text; business_phone_id text; direction text (inbound, outbound); sender_kind text (customer, bot); message_type text; body text NULL; sent_at timestamptz NULL; received_at timestamptz NULL; delivery_status text NULL; outbound_dedup_key text NULL UNIQUE; created_at timestamptz.
+
+Unicidad del mensaje externo por provider, business_phone_id y provider_message_id cuando esté informado. Los mensajes salientes pendientes aún pueden no tener el ID del proveedor.
+
+La combinación de claves evita registrar dos veces un webhook; las confirmaciones de entrega actualizan el mensaje, no crean otra oportunidad. El contador de bot y el envío requieren control de concurrencia y reconciliación de fallos; no confiar solo en el prompt.
+
+V1 guarda los mensajes recibidos por la integración del bot. No incluye seller_id ni mensajes privados del vendedor: ese emisor solo se agregaría con una integración real posterior.
+
+El tipo permite identificar texto/audio/imagen u otros eventos. Transcripción de audio y análisis de imágenes no quedan implementados por disponer de ese campo; requieren alcance específico. No exponer cuerpos o enlaces de contenido a vendedores sin asignación.
+
+# Score y evidencia
+
+## score_evaluations
+
+id uuid PK; lead_id uuid FK leads; score smallint entre 0 y 100; rules_version text requerido; rules_snapshot jsonb requerido; evaluated_at timestamptz; evaluated_through_message_id uuid FK messages NULL; extraction_model text NULL.
+
+rules_snapshot conserva los criterios efectivamente usados aunque luego cambie el código/configuración. extraction_model identifica la versión del modelo de extracción si corresponde. El mensaje límite debe pertenecer a la misma oportunidad.
+
+Las reglas iniciales viven en código/configuración versionada; no hay editor visual ni tabla de reglas administrable en V1. El total y sus evidencias se guardan atómicamente. Evaluaciones anteriores se conservan.
+
+## score_evidence
+
+id uuid PK; evaluation_id uuid FK score_evaluations; message_id uuid FK messages; signal_code text; quoted_text text; points_applied smallint.
+
+Cada fila explica una señal aplicada. El mensaje debe ser del cliente y pertenecer a la misma oportunidad de la evaluación. Validar que el fragmento respalde la señal, incluida la negación.
+
+Restricción propuesta UNIQUE(evaluation_id, signal_code) para criterios que puntúan una sola vez: elegir el mensaje que mejor respalda cada señal. Si se necesitan varias fuentes por señal, se ajusta antes de permitir sumas repetidas.
+
+El score total se deriva de criterios únicos según rules_snapshot; la regla de límite 0–100 también se conserva. No sumar entre evaluaciones: cada una es el total de un momento.
+
+Ejemplo conceptual: evaluación 45; evidencia compra próxima 20 y visita 25. Una evaluación posterior puede dar 60, no 105.
+
+## Datos para análisis futuro
+
+- lead_assignments apunta a la evaluación vigente al tomar/asignar la oportunidad.
+- lead_status_history apunta a la evaluación vigente al cerrar vendido/perdido.
+- Si aún no había evaluación, la referencia queda NULL; no inventar score 0.
+- Para comparar vendedores, usar el score conocido en la asignación y vendedor histórico, no solo responsable o score actuales.
+- Las bandas de score y cohortes para KPI se definirán con la gestión. No construir el dashboard ahora.
+
+# Actividades y seguimiento
+
+## activities
+
+id uuid PK; lead_id uuid FK leads; performed_by uuid FK profiles; activity_type text (whatsapp_contact, call, visit, note); purpose text (initial_contact, follow_up, coordination, other); status text (completed, scheduled, cancelled); scheduled_at timestamptz NULL; completed_at timestamptz NULL; outcome text NULL; notes text NULL; created_at y updated_at timestamptz.
+
+V1 confirmado: registrar actividades realizadas, notas y programar actividades (conclusión D10 del alcance). Esto no incluye recordatorios automáticos.
+
+completed exige completed_at; scheduled exige scheduled_at y no se cuenta como realizado. Definir resultados consistentes como no_response, contact_made y visit_completed. Una nota no es un intento de contacto.
+
+Intentos de recontacto = actividades realizadas con purpose=follow_up y tipo de contacto, no cantidad de mensajes. Contactos efectivos = subconjunto con resultado de contacto logrado. Las ediciones no deben crear nuevos intentos por duplicación.
+
+Solo responsable/admin puede registrar o consultar. La interfaz puede llamar Historial a la línea de tiempo que combina actividades y eventos: no hay una segunda carga para registrar el recontacto.
+
+En espera de stock, el vendedor puede registrar un intento sin cambiar estado si no hubo contacto. Cuando retoma la negociación, cambia explícitamente a En seguimiento y queda el historial.
+
+# Asignaciones y cambios de estado
+
+## lead_assignments
+
+id uuid PK; lead_id uuid FK leads; previous_assignee_id uuid FK profiles NULL; assignee_id uuid FK profiles NULL; mode text; actor_id uuid FK profiles NULL; reason text NULL; score_evaluation_id uuid FK score_evaluations NULL; occurred_at timestamptz.
+
+mode distingue automatic, manual_claim, returning_customer, admin_assignment y reassignment. La asignación manual y la reasignación administrativa están confirmadas por D11. actor_id es NULL para automatización; la modalidad identifica ese origen. Una referencia a score debe corresponder al mismo lead.
+
+El historial no es la fuente de autorización actual: el permiso se determina con leads.assigned_to. Haber atendido antes no habilita acceso permanente si luego cambia el responsable.
+
+## lead_status_history
+
+id uuid PK; lead_id uuid FK leads; status_field text (commercial_status, attention_state); old_value text NULL; new_value text; actor_id uuid FK profiles NULL; source text (user, automation); reason text NULL; score_evaluation_id uuid FK score_evaluations NULL; changed_at timestamptz.
+
+Distingue cambio comercial de cambio operativo. Al entrar en sold/lost registra evaluación vigente y fecha de cierre. Al pasar a awaiting_stock no cierra la oportunidad ni la elimina del catálogo.
+
+Las filas las genera la operación validada, no se crean arbitrariamente desde el navegador. Una eventual reapertura conserva el evento previo de pérdida aunque closed_at actual vuelva a NULL.
+
+# Proyecciones de consulta y permisos
+
+| Consulta o acción | Vendedor habilitado | Administrador |
 | --- | --- | --- |
-| `compras` | `id`; `cliente_id uuid FK → clientes`; `oportunidad_id uuid? FK → oportunidades`; `fecha_compra date`; `moneda_codigo char(3) FK → monedas`; `total numeric(14,2)`; `referencia_documental text?`; `registrada_por uuid? FK → perfiles`; `origen text`; `anulada_en timestamptz?`; `motivo_anulacion text?` | Muchas compras por cliente. Oportunidad opcional para compras históricas previas al sistema; si existe, mismo cliente. Total ≥ 0. Anulación conserva historial; no borrar. Captura/importación futura fuera del alcance. |
-| `compra_items` | `id`; `compra_id uuid FK → compras`; `vehiculo_id uuid? FK → vehiculos`; `marca_historica text`; `modelo_historico text`; `version_historica text?`; `anio_historico smallint?`; `cantidad integer`; `precio_unitario numeric(14,2)`; `subtotal numeric(14,2)` | Uno o más ítems por compra. Cantidad > 0; importes ≥ 0; moneda heredada de compra. Snapshot conserva la venta aunque cambie el vehículo. Vehículo nullable para historial que no esté en inventario. |
+| Catálogo y stock | Lectura. | Lectura y ABM. |
+| Bandeja pendiente | Proyección mínima sin score, resumen, evidencias, intereses detallados ni mensajes. | Detalle completo. |
+| Tomar pendiente | Operación atómica; capacidad y orden pendientes de reglas. | Según operación aprobada. |
+| Oportunidad asignada a sí mismo | Detalle, actividades, ofertas y cambios permitidos. | Todas. |
+| Oportunidad de otro vendedor | Sin acceso. | Acceso. |
+| Lista de oportunidades dentro del vehículo | Solo las propias. No enlazar pendientes con modelo antes de tomar si revela información restringida. | Todas, incluidos pendientes. |
+| Ficha del cliente | Identidad cuando exista oportunidad propia; relaciones y contadores solo de oportunidades autorizadas. | Historial completo. |
+| Evaluaciones y mensajes | Solo de oportunidades propias. | Todas. |
+| Datos privados de otros vendedores | Sin acceso general. | Gestión de usuarios. |
+| Modificar score, rol o responsable directamente | Prohibido. | Mediante operaciones autorizadas, no edición libre de score. |
 
-Propuesta inicial: subtotal = cantidad × precio unitario y total = suma de ítems. Descuentos, impuestos, permutas, cuotas y ventas con monedas mixtas requieren revisar este diseño; no se asumen reglas contables. Una compra no descuenta stock automáticamente en esta etapa.
+Implementación propuesta:
 
-## Contadores y consultas previstas
+- RLS sobre tablas privadas y consultas con autorización en servidor. Las tablas base de leads no dan lectura completa de pendientes al vendedor.
+- Una función list_pending_leads devuelve una lista explícita de columnas mínimas. Si usa SECURITY DEFINER, verificar usuario, habilitación y rol, fijar search_path y limitar EXECUTE. No usar SELECT \* ni devolver datos privados para ocultarlos después con CSS.
+- La selección pública exacta de campos queda en D05. Propuesta: ID, fecha de espera y estado, sin los datos que permitan estimar score.
+- Vistas normales con seguridad del invocador y RLS; no crear una vista con privilegios del dueño que filtre solo en la interfaz.
+- El detalle por vehículo/clientes y sus conteos debe aplicar el mismo permiso de las oportunidades. No filtrar solo el enlace y dejar visibles los datos.
+- Notificaciones en tiempo real para pendientes sin payload privado; volver a consultar la proyección segura. No publicar mensajes o scores completos en un canal compartido.
+- Tras deshabilitación o cambio de responsable, revalidar acceso y limpiar caché del cliente. Consultas directas con JWT antiguo deben quedar bloqueadas por is_enabled.
+- Una automatización técnica puede crear catálogo desde la recepción; no debe permitir que un usuario común use esa credencial ni suministre un actor arbitrario.
 
-| Indicador | Fuente y significado | Exclusiones |
+# Operaciones del backend
+
+## Ingresar una consulta
+
+1. Validar origen del webhook y deduplicar el evento.
+2. Buscar/crear cliente por teléfono normalizado.
+3. Resolver conversación existente frente a nueva búsqueda; no aplicar todavía una constante de siete días sin cerrar D07.
+4. Crear o actualizar la oportunidad correspondiente y registrar el mensaje.
+5. Extraer interés: si hay marca/modelo confiables, normalizar y reutilizar/crear la ficha de catálogo; insertar el interés. Si la búsqueda es genérica, conservarla sin catálogo.
+6. Evaluar con reglas versionadas y guardar evidencias.
+7. Asignar o poner en espera según disponibilidad y reglas aprobadas.
+8. Registrar evento de asignación, preparar aviso y continuar/finalizar bot sin exceder tres mensajes.
+
+La transacción local y el envío externo tienen fallos distintos. Para la implementación, usar una cola o registro durable de envíos e idempotencia; su detalle técnico se especifica en la fase de integración. No mantener una transacción SQL abierta mientras espera al proveedor.
+
+## Tomar y asignar
+
+Bloquear la oportunidad y comprobar que sigue sin responsable; verificar usuario habilitado; evaluar la política; actualizar assigned_to y atención; agregar historial y referencia de score en una transacción.
+
+La asignación automática también bloquea o serializa la capacidad del vendedor: dos consultas simultáneas no deben seleccionar al mismo vendedor como libre sobre un estado obsoleto. Orden de espera por waiting_since y desempate estable.
+
+No dar al vendedor permiso general para actualizar assigned_to. Al tomar, devolver el detalle únicamente después de confirmar la transacción.
+
+## Confirmar venta
+
+Verificar responsable/admin, bloquear oportunidad y unidad, validar stock, registrar sales y actualizar ambos estados con historial en una transacción. Repetir una solicitud no debe duplicar ventas. Si otra operación vendió la unidad, informar conflicto.
+
+## Registrar llegada de stock
+
+Administrador agrega una unidad real al modelo existente. El stock calculado cambia y las oportunidades previas siguen vinculadas. Se muestran como candidatas al revisar la ficha; no crear leads nuevos, enviar mensajes ni reabrir automáticamente las oportunidades.
+
+## Administrar vendedores
+
+Backend valida admin, opera Supabase Auth y profiles, y registra evento. Si el alta externa y la inserción de perfil no finalizan juntas, reconciliar el estado y evitar dejar una cuenta con privilegios incompletos. Solo habilitar después de completar los datos necesarios.
+
+Deshabilitar bloquea futuras asignaciones y el acceso. No borra ni reasigna automáticamente las oportunidades existentes. Una nueva consulta de un cliente recurrente cuyo responsable previo esté deshabilitado vuelve a la bandeja (conclusión D04); las reasignaciones administrativas están incluidas (D11).
+
+En la primera migración no hay altas públicas ni perfiles creados desde metadata editable. Un alta en Auth sin perfil queda sin acceso. `register_seller` inserta perfil y auditoría en una transacción después de verificar al administrador. Los dos sistemas no comparten transacción: un fallo intermedio requiere conciliación y no un borrado automático. `bootstrap_account` es exclusivo de la credencial de servidor para las cuentas iniciales; registra `action=bootstrap`, con el propio usuario como actor técnico del alta inicial. Los roles de administradores no se editan desde el formulario de vendedores. `accepts_assignments` inicia en false hasta definir y habilitar el flujo operativo.
+
+# Índices y restricciones para las migraciones
+
+- UNIQUE customers(phone_e164), vehicles(normalized_key), inventory_units(internal_code).
+- leads(assigned_to, commercial_status); leads(customer_id, created_at DESC).
+- Índice parcial de leads(waiting_since, id) para assigned_to IS NULL y commercial_status IN (new_inquiry, follow_up, awaiting_stock).
+- inventory_units(vehicle_id, status).
+- lead_interests(vehicle_id, lead_id), lead_offers(vehicle_id, lead_id).
+- conversations(lead_id, started_at), messages(conversation_id, created_at).
+- UNIQUE parcial del ID externo de mensaje y UNIQUE outbound_dedup_key cuando exista.
+- score_evaluations(lead_id, evaluated_at DESC, id) y score_evidence(evaluation_id).
+- activities(lead_id, completed_at DESC), lead_assignments(lead_id, occurred_at), lead_status_history(lead_id, changed_at).
+- Índice parcial para una sola búsqueda primaria activa por lead.
+- UNIQUE sales(lead_id) y sales(inventory_unit_id) para las ventas confirmadas de V1.
+- FK compuestas o validación transaccional para asegurar misma oportunidad en evidencia/evaluación/mensaje y misma unidad/modelo en oferta/venta.
+- Borrado RESTRICT o archivado donde existan referencias históricas. No destruir relaciones con usuarios deshabilitados ni vehículos vendidos.
+
+Los índices se ajustarán a consultas y volumen al implementar; no sustituyen la autorización ni la atomicidad.
+
+# Comprobación de los tres casos
+
+| Caso | Registros relevantes | Resultado |
 | --- | --- | --- |
-| Consultas del cliente | Cantidad de oportunidades distintas por `cliente_id` | Mensajes recibidos, reaperturas de la misma oportunidad y recontactos no suman consultas por sí solos. |
-| Mensajes del cliente | Mensajes lógicos de sus conversaciones; separar entrantes, salientes e internos | No multiplicar por los vínculos con oportunidades. Versiones/correcciones del mismo mensaje lógico y reintentos de transporte no suman mensajes nuevos. |
-| Intentos de recontacto | Registros distintos de `intentos_recontacto`, por oportunidades del cliente | Excluir tareas programadas, notas, recepción inicial del bot y cantidad de mensajes de cada intento. |
-| Agenda de recontactos | Actividades de recontacto programadas, no completadas ni canceladas | Es una agenda de tareas, no el contador de intentos. |
-| Compras | Operaciones distintas de `compras`; mostrar anuladas por separado | No contar cada ítem o unidad como otra compra. |
-| Salidas iniciales del bot | Posiciones de mensajes lógicos reservadas/enviadas por recepción | No usar cantidad de consultas o intentos del vendedor; política de fallos pendiente. |
-| En espera / Mis oportunidades | Oportunidades abiertas sin responsable / con responsable igual al usuario actual | La definición exacta de estados abiertos y terminales queda pendiente. |
+| Corolla 2022 en stock | Interés apunta a Corolla con año 2022; venta a una unidad Corolla 2022 available. | Lead sold, unidad sold; otras unidades Corolla no cambian. |
+| Hilux buscada y Ranger vendida | Interés Hilux; oferta Ranger accepted; venta a unidad Ranger. | Búsqueda Hilux se conserva, solo unidad Ranger queda sold. |
+| Hilux buscada sin stock y Ranger rechazada | Ficha Hilux sin unidades, interés vinculado, oferta Ranger rejected. | Lead awaiting_stock, sin venta; no disminuye stock de Ranger. |
+| Llega Hilux después | Nueva unidad Hilux available en ficha existente. | Se consulta la lista autorizada; responsable registra recontacto y retoma gestión si corresponde. |
 
-Para consultar el historial completo: partir de cliente, recuperar todas sus oportunidades, conversaciones, intentos, actividades y compras; mantener las relaciones por ID y ordenar por fechas originales con ID/secuencia como desempate. No almacenar un único “último historial” que reemplace eventos pasados.
+Para demanda no satisfecha, contar intereses activos en oportunidades awaiting_stock. No contar como demanda vigente una Hilux de alguien que ya compró Ranger, aunque conserve la búsqueda histórica.
 
-Índices previstos (sólo diseño): todas las FK de consulta; oportunidades por cliente/fecha y responsable/estado/fecha; bandeja sin responsable por zona/fecha; mensajes por conversación/fecha/ID y oportunidad; recepciones por oportunidad/inicio; evaluaciones por oportunidad/fecha; evidencias por evaluación y mensaje; actividades por responsable/fecha programada; intentos por oportunidad/fecha; historiales por oportunidad/secuencia; compras por cliente/fecha. La elección final se verificará con consultas reales, sin crear índices ahora.
+El listado por ficha puede unir intereses, ofertas y ventas, mostrando etiquetas Buscado, Ofrecido o Vendido y deduplicando la oportunidad. Así se explica por qué está asociada. Para vendedores aplica RLS antes de contar o listar.
 
-## Permisos previstos por rol
+# Validación prevista antes de implementar
 
-No hay autenticación ni autorización ejecutable en esta entrega. El selector visual no protege datos. La futura implementación deberá aplicar control de acceso en servidor y base, incluyendo las relaciones secundarias; esconder botones no basta.
+1. Dos solicitudes crean el mismo modelo a la vez: queda una ficha y dos intereses válidos.
+2. Búsqueda genérica: no se inventa marca, precio ni unidad.
+3. Dos vendedores toman la misma oportunidad: solo uno recibe el detalle.
+4. Vendedor intenta acceder a score o chat pendiente por URL/API: denegado.
+5. Vendedor consulta ficha de vehículo o cliente: no recibe oportunidades ajenas ni sus contadores.
+6. Admin ve las asociaciones completas.
+7. Cuenta deshabilitada intenta usar una sesión previa: denegado; no recibe asignación.
+8. Venta alternativa conserva interés original y actualiza solo la unidad comprada.
+9. Dos ventas intentan usar la misma unidad: una falla sin dejar un cierre parcial.
+10. Llegada de stock no envía mensajes ni cambia estados por sí sola.
+11. Reintento de webhook no duplica cliente, mensaje, lead o respuesta.
+12. Score histórico de asignación y cierre no cambia al recalcular.
+13. Actividad realizada se cuenta una vez; nota o actividad programada no cuenta como recontacto.
+14. Un retorno al bot y varios mensajes seguidos respetan la política de nueva oportunidad aprobada.
 
-| Operación | Vendedor | Admin |
-| --- | --- | --- |
-| Consultar clientes, consultas, compras e historial | Sí; alcance de visibilidad global o por equipo pendiente | Sí |
-| Leer mensajes, score y evidencias | Sí, de los clientes/oportunidades autorizados | Sí |
-| Cambiar estado | Sólo de oportunidades actualmente propias y mediante transición válida | Gestión comercial; transiciones a confirmar |
-| Tomar lead en espera de su zona | Sí, incluso ocupado; definición de zona y límites pendientes | Como gestión de responsables; elegibilidad para tomar como vendedor pendiente |
-| Asignar, reasignar o liberar responsables | No, fuera de la toma voluntaria permitida | Sí, con auditoría |
-| Registrar seguimiento / intento | Propuesta: sólo en oportunidades propias, autor real obligatorio | Propuesta: en oportunidades gestionadas, conservando autor y ejecutor |
-| Consultar vehículos | Sí, sólo lectura; visibilidad de bajas pendiente | Sí, incluyendo bajas para gestión |
-| Crear, editar, dar de baja vehículos | No | Sí, con baja lógica y autoría |
-| Modificar mensajes originales, evidencias o historiales | No | No por edición directa; corrección auditada a diseñar |
-| Crear score, mensajes automáticos o recepción | No como cliente de base | Tampoco por privilegio administrativo general; futuro servicio con permisos específicos |
-| Crear/corregir clientes y compras históricas | No definido; denegado hasta acordar | No definido; flujo de carga y auditoría por acordar |
-| Administrar roles/cuentas y zonas | No | Propuesto, sujeto a confirmar; gestionar responsables no equivale necesariamente a administrar identidades |
+Estas son verificaciones a implementar sobre las migraciones y operaciones. El documento no constituye evidencia de pruebas ejecutadas.
 
-Diseño conceptual de RLS futuro: acceso denegado por defecto sin identidad activa; lectura de tablas hijas subordinada a su oportunidad/cliente autorizado; escrituras de vehículos sólo Admin; transición de oportunidad sólo dueño o Admin; evitar que un vendedor cambie cliente, responsable o rol mediante una actualización de estado; autoría inalterable; toma voluntaria atómica con zona vigente. Ninguna política SQL se genera aquí.
+# Pendientes que condicionan el backend
 
-## Integridad, conservación y decisiones a revisar
+- Aprobar definitivamente la granularidad del catálogo propuesta. En espera de stock ya está confirmado.
+- D01/D02/D03: liberación, capacidad y control de disponibilidad.
+- D04/D06: elegir al responsable anterior cuando hubo varios; el nuevo responsable ve el detalle existente y el anterior pierde acceso. El recurrente con responsable deshabilitado vuelve a bandeja.
+- D05: campos exactos de la bandeja pública.
+- D07: condición temporal de siete días y excepciones, sin confundir mensaje con búsqueda.
+- D08/D09: reglas de calificación y orden de recepción/asignación. Confirmado: el vendedor obtiene el teléfono del panel y contacta al cliente. Falta reconciliar la asignación de pendientes al liberarse un vendedor con la conclusión D09 que indica toma voluntaria cuando no hay libres.
+- D10: las actividades programadas están aprobadas; definir edición y cancelación sin implementar recordatorios.
+- D13: carga inicial/API e identificación externa.
+- D15: si puede devolver una oportunidad después de ver su score y quién lo autoriza.
+- D17: anulación/corrección de venta y stock.
 
-- FK restrictivas y bajas lógicas para usuarios, clientes, zonas y vehículos referenciados. No borrar compras, mensajes o evidencia por cascada. Retención, anonimización y plazos deben definirse antes de integrar datos personales.
-- La asignación automática futura sólo considerará vendedores disponibles; no se fija algoritmo, capacidad ni prioridad. La toma voluntaria en zona no se bloquea sólo por estar ocupado. No se asume que el futuro límite automático aplica igual a tomas voluntarias.
-- Confirmar alcance de lectura del vendedor, semántica de zona, capacidad, estados/transiciones, apertura/reapertura de consultas y recepción inicial.
-- Confirmar escala/versionado del score, tratamiento de mensajes editados, deduplicación de contactos y política de acceso a evidencias anteriores.
-- Confirmar unidad de inventario, monedas, precio cero/no informado, datos obligatorios, rango de años y preservación de precios históricos.
-- Confirmar quién carga compras, anulaciones, permisos de corrección, transferencia de tareas y conservación de datos.
-
-El registro detallado y las alternativas sin resolver están en [decisiones.md](decisiones.md). Ninguna decisión pendiente habilita implementación de la siguiente etapa.
+Orden sugerido para comenzar: identidad/permisos; catálogo/unidades/intereses; oportunidades y bandeja segura; actividades y venta transaccional; recepción y score. Seed, conexión externa y despliegue se autorizan por etapa, no se ejecutan por aprobar este diseño.
