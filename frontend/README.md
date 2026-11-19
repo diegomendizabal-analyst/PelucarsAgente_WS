@@ -22,6 +22,16 @@ npm run typecheck
 npm run build
 ```
 
+La interfaz usa CSS nativo de Next.js. Después de actualizar desde la primera entrega, reiniciar una vez el servidor de desarrollo para que tome el cambio de `next.config.ts`.
+
+Con el servidor local iniciado, se puede ejecutar la revisión de filas, fichas y navegación en Chrome/Chromium (también admite Edge):
+
+```text
+npm run check:ui -- http://127.0.0.1:3000
+```
+
+Usar la URL y el puerto del servidor. `CHROME_BIN` permite indicar el ejecutable si no se detecta automáticamente. Para comprobar también las actualizaciones de CSS en desarrollo, agregar `--hmr`: esta opción agrega y restaura una regla temporal en `globals.css`, por lo que no se debe editar ese archivo mientras corre. Sin esa opción también se puede verificar `npm run start` después del build. Capturas y reporte quedan en `.next/ui-qa/`, ignorados por Git.
+
 - [Pantallas, rutas y recorrido](../docs/frontend.md)
 - [Modelo de datos propuesto](../docs/modelo-de-datos.md)
 - [Decisiones pendientes](../docs/decisiones.md)

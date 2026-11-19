@@ -1,12 +1,14 @@
 # Frontend visual — Pelucars
 
-**Defectos visuales conocidos:** las capturas posteriores del usuario muestran pérdida de distribución en las filas de oportunidades y de jerarquía en el historial. Quedan pendientes para el 18/11/2026 en [pendientes-frontend.md](pendientes-frontend.md), junto con el relevamiento de componentes similares. Las verificaciones descritas abajo no cierran estas observaciones.
+**Revisión visual del 18/11/2026:** se corrigen la distribución de las filas y la jerarquía de las cronologías, con componentes compartidos en listados y fichas. El diagnóstico y la cobertura de revisión están en [pendientes-frontend.md](pendientes-frontend.md).
 
-Actualizado el 17 de noviembre de 2026. Aplicación Next.js en `frontend/`. A pedido del usuario, la interfaz incorpora una muestra ficticia local para evaluar las pantallas antes de definir el modelo final. No hay conexión a Supabase, autenticación, persistencia, backend de negocio ni envíos.
+Actualizado el 18 de noviembre de 2026. Aplicación Next.js en `frontend/`. A pedido del usuario, la interfaz incorpora una muestra ficticia local para evaluar las pantallas antes de definir el modelo final. No hay conexión a Supabase, autenticación, persistencia, backend de negocio ni envíos.
 
 ## Ejecutar y recorrer
 
 Desde `frontend/`, ejecutar `npm.cmd run dev` en PowerShell (o `npm run dev` en otras terminales) y abrir la URL indicada por Next.js.
+
+Si había un servidor ejecutándose con la primera entrega, detenerlo y volver a iniciarlo una vez: cambió la configuración del procesamiento de CSS.
 
 1. **Oportunidades → En espera:** Ana Martínez consulta por el Corolla. Abrir la fila para ver sus datos, dos mensajes ficticios, score ilustrativo y evidencia resaltada. **Ver mensaje original** abre Conversación y enfoca el mensaje correspondiente, incluso desde otra sección.
 2. **Mis oportunidades:** Bruno López consulta por el Cronos. Su ficha tiene cuatro mensajes, una llamada programada, un intento de recontacto realizado y cambios de responsable/estado. Representa al vendedor de demostración tanto en vista Vendedor como Admin.
@@ -68,7 +70,12 @@ Las fichas vacías mantienen `—` para información no disponible; los registro
 - `src/components/app-shell.tsx`: navegación, selector de rol y aviso global de datos ficticios.
 - `src/components/ui.tsx`: componentes compartidos; indicadores con valor opcional para soportar muestras y estados vacíos.
 - `src/components/opportunities.tsx`, `clients.tsx`, `vehicles.tsx`: conservan las estructuras vacías originales.
-- `src/app/globals.css`: estilos compartidos y responsive para filas, mensajes y cronología.
+- `src/app/globals.css`: paleta, tipografía, estructura, formularios y adaptación responsive.
+- `src/app/records.css` y `src/components/record-ui.tsx`: columnas compartidas, identidades, distintivos, mensajes y eventos de cronología.
+- `src/app/loading.tsx` y límites `Suspense` en las páginas dinámicas: estado de carga para navegar a las fichas.
+- `scripts/check-ui.mjs`: revisión repetible de estilos efectivos, navegación y actualizaciones de CSS.
+
+La paleta provisional usa blanco, negro y grises con acentos rojos. Sólo se tomaron los colores de la referencia: no se agregó la foto del logo. Títulos, nombres, descripciones y metadatos tienen niveles tipográficos diferenciados. Las cronologías muestran fecha/hora, tipo, título, detalle y responsable; tareas programadas e intentos realizados permanecen separados. Las horas usan formato de 24 horas, consistente entre servidor y navegador. El manual de marca queda pendiente (D19).
 
 Se mantiene la navegación lateral en escritorio y superior en móvil. Filas y formularios se apilan, filtros envuelven, pestañas pueden desplazarse. Hay labels, foco visible, enlace de salto al contenido, `aria-current` y botones de sección con `aria-pressed`. Los ejemplos no requieren imágenes externas ni nuevas dependencias.
 
@@ -82,9 +89,19 @@ npm.cmd run typecheck
 npm.cmd run build
 ```
 
-La muestra pasó lint, tipos y build, y las 16 rutas de muestras/formularios/vistas vacías respondieron HTTP 200. Se verificaron 66 combinaciones en Chrome sin ventana: 11 rutas pobladas, dos roles y anchos de 1440/768/390 px, sin desbordamiento horizontal ni excepciones JavaScript. Se comprobaron bandejas, búsqueda sin acentos y sin resultados, filtro de stock, foco de evidencia desde Seguimiento, contadores de Bruno (1 consulta, 4 mensajes, 1 intento, 1 compra), compra histórica, edición Admin precargada, ausencia de persistencia y pantalla 404 para un ID desconocido. También se inspeccionaron capturas de escritorio y móvil.
+El 18/11/2026 pasaron lint, tipos y build. La revisión con `scripts/check-ui.mjs` pasó en Chrome sin ventana tanto en desarrollo como en el build servido localmente: 15 rutas, dos roles y anchos de 1440/768/390/320 px, con todas las secciones de las cuatro fichas pobladas. Se comprobaron estilos computados, alineación de columnas, espaciado, jerarquía de eventos y ausencia de desbordamiento horizontal y errores de consola/hidratación. También se verificaron ambas bandejas, búsqueda sin acentos y sin resultados, filtro de stock, concordancia de contadores, foco de evidencia desde Historial, contadores de Bruno (1 consulta, 4 mensajes, 1 intento, 1 compra) y edición Admin precargada. Se inspeccionaron capturas de escritorio y móvil.
 
-Lint detectó archivos generados dentro de una carpeta `.next` anidada que ya existía. Se ajustaron `eslint.config.mjs` y `.gitignore` para excluir `**/.next/`, conservando los archivos de código. No se agregaron dependencias. Los scripts y capturas temporales de QA quedan bajo `.next/`, fuera del código versionado.
+El recorrido completó 220 escenarios de presentación por ejecución; desarrollo agrega una comprobación de actualización de CSS, para un total de 221. Esa comprobación agrega y revierte una regla temporal y observa el estilo computado sin recargar ni reiniciar el servidor. Se corrigió además un desbordamiento a 320 px y los avisos de navegación de Next.js por leer parámetros fuera de un límite Suspense.
+
+Para repetir, iniciar el servidor local y ejecutar, ajustando el puerto:
+
+```text
+npm.cmd run check:ui -- http://127.0.0.1:3100 --hmr
+```
+
+Requiere Chrome, Chromium o Edge local; `CHROME_BIN` permite indicar su ejecutable. Usar `--hmr` sólo contra desarrollo y sin editar `globals.css` durante la prueba. Para verificar producción ejecutar `npm.cmd run start -- --port 3100` después del build y omitir `--hmr`. Los reportes y capturas están en `.next/ui-qa/`; son temporales y el siguiente build puede borrarlos.
+
+La exclusión de `**/.next/` en ESLint y Git se mantiene desde la primera entrega. No se agregaron dependencias. El verificador está versionado en `scripts/`; sus reportes y capturas quedan fuera del código versionado.
 
 No se prueban autorización real, persistencia, stock real, scoring, integraciones ni envíos, que siguen fuera de alcance. La revisión visual no es una auditoría completa de accesibilidad ni una prueba en dispositivos físicos o múltiples navegadores.
 

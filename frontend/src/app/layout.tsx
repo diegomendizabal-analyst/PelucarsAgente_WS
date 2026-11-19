@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/components/app-shell";
 import "./globals.css";
+import "./records.css";
 
 export const metadata: Metadata = {
   title: { default: "Pelucars · Gestión comercial", template: "%s · Pelucars" },
