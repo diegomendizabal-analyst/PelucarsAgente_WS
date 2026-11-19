@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import Loading from "@/app/loading";
 import { notFound } from "next/navigation";
 import { DemoVehicleDetail } from "@/components/demo-details";
 import { demoVehicles } from "@/lib/demo-data";
@@ -6,7 +8,11 @@ export const metadata = { title: "Vehículo de demostración" };
 export function generateStaticParams() {
   return demoVehicles.map(({ id }) => ({ id }));
 }
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
+  return <Suspense fallback={<Loading />}><Details params={params} /></Suspense>;
+}
+
+async function Details({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const vehicle = demoVehicles.find((item) => item.id === id);
   if (!vehicle) notFound();

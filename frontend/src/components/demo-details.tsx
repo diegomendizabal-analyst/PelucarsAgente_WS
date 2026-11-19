@@ -2,10 +2,17 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { CalendarClock, CarFront, History, LockKeyhole, MessageSquare, Sparkles } from "lucide-react";
-import { demoAttempts, demoClients, demoDate, demoFollowups, demoMoney, demoOpportunities, demoPurchases, demoVehicles, vehicleName, type DemoOpportunity, type DemoVehicle } from "@/lib/demo-data";
+import { ArrowRightLeft, Bot, CalendarClock, CarFront, History, Inbox, LockKeyhole, MessageSquare, ReceiptText, Sparkles, UserRound } from "lucide-react";
+import { demoAttempts, demoClients, demoCount, demoDate, demoFollowups, demoMoney, demoOpportunities, demoPurchases, demoVehicles, vehicleName, type DemoOpportunity, type DemoVehicle } from "@/lib/demo-data";
 import { usePreviewRole } from "./app-shell";
 import { BackLink, EmptyState, Metric, Notice, PageHeading, Panel, PendingButton } from "./ui";
+import { RecordArrow, RecordCell, RecordIdentity, SectionIntro, StatusBadge, TimelineEvent } from "./record-ui";
+
+const historyPresentation = {
+  received: { icon: Inbox, label: "Recepción de consulta" },
+  assigned: { icon: UserRound, label: "Cambio de responsable" },
+  state: { icon: ArrowRightLeft, label: "Cambio de estado" },
+};
 
 function Details({ items }: { items: [string, ReactNode][] }) {
   return <dl className="details-grid">{items.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
@@ -17,11 +24,11 @@ function SectionButtons({ items, value, onChange }: { items: string[]; value: st
 
 function Attempts({ opportunityIds }: { opportunityIds: string[] }) {
   const rows = demoAttempts.filter((item) => opportunityIds.includes(item.opportunityId));
-  return rows.length ? <div className="demo-timeline">{rows.map((item) => <article key={item.id}>
-    <span className="demo-badge">Intento realizado · {item.channel}</span>
-    <h3>{item.result}</h3><p>{demoDate(item.at)} · {item.owner}</p>
+  return rows.length ? <ol className="activity-timeline">{rows.map((item) => <TimelineEvent key={item.id}
+    at={item.at} icon={MessageSquare} label={`Intento realizado · ${item.channel}`} title={item.result}
+    description="Contacto realizado y respuesta recibida. Cuenta como un intento de recontacto." actor={item.owner}>
     <Link className="text-link" href={`/oportunidades/${item.opportunityId}`}>Ver oportunidad asociada →</Link>
-  </article>)}</div> : <EmptyState icon={CalendarClock} title="Sin intentos de recontacto" description="Este ejemplo todavía no tiene contactos realizados por un vendedor." compact />;
+  </TimelineEvent>)}</ol> : <EmptyState icon={CalendarClock} title="Sin intentos de recontacto" description="Este ejemplo todavía no tiene contactos realizados por un vendedor." compact />;
 }
 
 export function DemoOpportunityDetail({ opportunity }: { opportunity: DemoOpportunity }) {
@@ -35,7 +42,7 @@ export function DemoOpportunityDetail({ opportunity }: { opportunity: DemoOpport
     requestAnimationFrame(() => {
       const message = document.getElementById(opportunity.evidence.messageId);
       message?.focus();
-      message?.scrollIntoView({ block: "center", behavior: "smooth" });
+      message?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     });
   }
 
@@ -54,24 +61,37 @@ export function DemoOpportunityDetail({ opportunity }: { opportunity: DemoOpport
         <section className="panel">
           <SectionButtons items={["Conversación", "Seguimiento", "Historial"]} value={tab} onChange={setTab} />
           {tab === "Conversación" && <div className="panel-body">
-            <p className="field-help">Conversación ficticia · {opportunity.messages.length} mensajes · No se enviaron mensajes reales.</p>
+            <SectionIntro title="Conversación" count={opportunity.messages.length} description="Mensajes de ejemplo. El fragmento resaltado fundamenta el score ilustrativo." />
             <div className="demo-conversation">{opportunity.messages.map((message) => {
               const isEvidence = message.id === opportunity.evidence.messageId;
               const start = isEvidence ? message.text.indexOf(opportunity.evidence.quote) : -1;
               return <article key={message.id} id={message.id} tabIndex={-1} className={`demo-message ${message.sender === "Cliente" ? "incoming" : "outgoing"}`}>
-                <header><strong>{message.sender === "Cliente" ? client.name : message.sender === "Bot" ? "Bot · ejemplo" : "Vendedor de demostración"}</strong><time dateTime={message.at}>{demoDate(message.at)}</time></header>
+                <header><span className="message-author">{message.sender === "Bot" ? <Bot size={15} /> : <UserRound size={15} />}<strong>{message.sender === "Cliente" ? client.name : message.sender === "Bot" ? "Bot · ejemplo" : "Vendedor de demostración"}</strong></span><time dateTime={message.at}>{demoDate(message.at)}</time></header>
                 <p>{start >= 0 ? <>{message.text.slice(0, start)}<mark>{opportunity.evidence.quote}</mark>{message.text.slice(start + opportunity.evidence.quote.length)}</> : message.text}</p>
+                {isEvidence && <span className="message-evidence-label"><Sparkles size={12} /> Evidencia del score</span>}
               </article>;
             })}</div>
-            <PendingButton>Enviar mensaje</PendingButton>
+            <div className="activity-actions"><PendingButton>Enviar mensaje</PendingButton></div>
           </div>}
           {tab === "Seguimiento" && <div className="panel-body">
-            <h2>Agenda de recontactos</h2>
-            {followups.length ? <div className="demo-timeline">{followups.map((item) => <article key={item.id}><span className="demo-badge">Programado · aún no es un intento</span><h3>{item.text}</h3><p>{demoDate(item.at)} · {item.owner}</p></article>)}</div> : <EmptyState icon={CalendarClock} title="Sin tareas programadas" description="La oportunidad está a la espera de seguimiento." compact />}
-            <h2>Intentos realizados</h2><Attempts opportunityIds={[opportunity.id]} />
-            <PendingButton>Registrar seguimiento</PendingButton>
+            <section className="activity-group">
+              <SectionIntro title="Próximas actividades" count={followups.length} description="Tareas de la agenda de ejemplo. Programar una tarea no cuenta como intento realizado." />
+              {followups.length ? <ol className="activity-timeline">{followups.map((item) => <TimelineEvent key={item.id}
+                at={item.at} icon={CalendarClock} label="Recontacto programado" title={item.text} description="Llamada pendiente de realizar en este ejemplo." actor={item.owner} />)}</ol>
+                : <EmptyState icon={CalendarClock} title="Sin tareas programadas" description="La oportunidad está a la espera de seguimiento." compact />}
+            </section>
+            <section className="activity-group">
+              <SectionIntro title="Intentos realizados" count={demoAttempts.filter((item) => item.opportunityId === opportunity.id).length} description="Contactos efectivamente realizados, con su canal y resultado." />
+              <Attempts opportunityIds={[opportunity.id]} />
+            </section>
+            <div className="activity-actions"><PendingButton>Registrar seguimiento</PendingButton></div>
           </div>}
-          {tab === "Historial" && <div className="panel-body demo-timeline">{opportunity.history.map((event, index) => <article key={index}><h3>{event.text}</h3><p>{demoDate(event.at)}</p></article>)}</div>}
+          {tab === "Historial" && <div className="panel-body">
+            <SectionIntro title="Recorrido de la oportunidad" count={opportunity.history.length} description="Del ingreso al seguimiento: cambios de estado y responsable, en orden cronológico." />
+            <ol className="activity-timeline">{opportunity.history.map((event) => <TimelineEvent key={`${event.at}-${event.kind}`}
+              at={event.at} icon={historyPresentation[event.kind].icon} label={historyPresentation[event.kind].label}
+              title={event.title} description={event.description} actor={event.actor} />)}</ol>
+          </div>}
         </section>
       </div>
       <aside className="stack">
@@ -84,6 +104,7 @@ export function DemoOpportunityDetail({ opportunity }: { opportunity: DemoOpport
         </div></Panel>
         <Panel title="Score y evidencia" action={<Sparkles size={18} />}><div className="panel-body">
           <div className="score-value">{opportunity.score}<span> / 100 · ilustrativo</span></div>
+          <div className="score-track" aria-hidden="true"><span style={{ width: `${opportunity.score}%` }} /></div>
           <p className="field-help">Valor escrito para la demo. No hay motor de scoring ni escala definitiva.</p>
           <div className="evidence-placeholder"><span className="eyebrow">FRAGMENTO DEL MENSAJE</span><blockquote>{opportunity.evidence.quote}</blockquote><p>{opportunity.evidence.reason}</p><button type="button" className="button secondary" onClick={showEvidence}>Ver mensaje original</button></div>
         </div></Panel>
@@ -113,10 +134,19 @@ export function DemoClientDetail({ clientId }: { clientId: string }) {
       <SectionButtons items={["Consultas", "Recontactos", "Compras"]} value={tab} onChange={setTab} />
       {tab === "Consultas" && <div className="demo-list">{opportunities.map((item) => {
         const vehicle = demoVehicles.find((vehicle) => vehicle.id === item.vehicleId)!;
-        return <Link key={item.id} className="demo-row history-row" href={`/oportunidades/${item.id}`}><div><strong>{vehicleName(vehicle)}</strong><small>{demoDate(item.messages[0].at)}</small></div><span className="demo-badge">{item.state}</span><span className="text-link">Ver oportunidad →</span></Link>;
+        return <Link key={item.id} className="demo-row history-row" href={`/oportunidades/${item.id}`}>
+          <RecordIdentity avatar={<CarFront size={21} />} title={vehicleName(vehicle)} subtitle={`${vehicle.version} · ${vehicle.year}`} />
+          <RecordCell label="Estado"><StatusBadge tone={item.assigned ? "neutral" : "accent"}>{item.state}</StatusBadge></RecordCell>
+          <RecordCell label="Fecha de consulta"><time dateTime={item.messages[0].at}>{demoDate(item.messages[0].at)}</time></RecordCell><RecordArrow />
+        </Link>;
       })}</div>}
-      {tab === "Recontactos" && <div className="panel-body"><Attempts opportunityIds={ids} /></div>}
-      {tab === "Compras" && (purchases.length ? <div className="panel-body demo-timeline">{purchases.map((item) => <article key={item.id}><span className="demo-badge">Compra histórica · ejemplo</span><h3>{item.description}</h3><p>{demoDate(item.date)} · {demoMoney(item.amount, item.currency)}</p><p>{item.note}</p></article>)}</div> : <EmptyState icon={CarFront} title="Sin compras anteriores" description="Este cliente de ejemplo todavía no registra compras." compact />)}
+      {tab === "Recontactos" && <div className="panel-body"><SectionIntro title="Historial de recontactos" count={attempts.length} description="Los intentos realizados en todas las consultas de este cliente." /><Attempts opportunityIds={ids} /></div>}
+      {tab === "Compras" && <div className="panel-body"><SectionIntro title="Compras anteriores" count={purchases.length} description="Operaciones históricas de ejemplo, independientes del inventario actual." />
+        {purchases.length ? <ol className="activity-timeline">{purchases.map((item) => <TimelineEvent key={item.id}
+          at={item.date} icon={ReceiptText} label="Compra histórica · ejemplo" title={item.description}
+          description={item.note} amount={demoMoney(item.amount, item.currency)} />)}</ol>
+          : <EmptyState icon={CarFront} title="Sin compras anteriores" description="Este cliente de ejemplo todavía no registra compras." compact />}
+      </div>}
     </section>
   </>;
 }
@@ -138,7 +168,7 @@ export function DemoVehicleDetail({ vehicle, editing = false }: { vehicle: DemoV
       <label>Stock *<input name="stock" required type="number" min="0" step="1" defaultValue={vehicle.stock} /></label>
       <div className="full-width form-actions"><Link className="button secondary" href={path}>Volver sin guardar</Link><PendingButton>Guardar cambios</PendingButton></div>
     </form></Panel> : <section className="panel"><EmptyState icon={LockKeyhole} title="Vista de vendedor: sólo consulta" description="Cambiá a Admin en el selector de demostración para revisar la edición." compact /></section>) : <>
-      <Panel title="Información del vehículo"><Details items={[["Marca", vehicle.brand], ["Modelo", vehicle.model], ["Versión", vehicle.version], ["Año", vehicle.year], ["Precio ficticio", demoMoney(vehicle.price, vehicle.currency)], ["Moneda", vehicle.currency], ["Stock ficticio", `${vehicle.stock} unidades`], ["Estado del registro", "Activo · ejemplo"]]} /></Panel>
+      <Panel title="Información del vehículo"><Details items={[["Marca", vehicle.brand], ["Modelo", vehicle.model], ["Versión", vehicle.version], ["Año", vehicle.year], ["Precio ficticio", demoMoney(vehicle.price, vehicle.currency)], ["Moneda", vehicle.currency], ["Stock ficticio", demoCount(vehicle.stock, "unidad", "unidades")], ["Estado del registro", "Activo · ejemplo"]]} /></Panel>
       {role === "admin" && <div className="danger-zone"><div><h2>Baja del vehículo</h2><p>Acción visual pendiente de implementación.</p></div><PendingButton>Dar de baja</PendingButton></div>}
     </>}
   </>;

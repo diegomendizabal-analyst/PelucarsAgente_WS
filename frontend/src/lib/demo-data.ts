@@ -33,7 +33,7 @@ export type DemoOpportunity = {
   score: number;
   evidence: { messageId: string; quote: string; reason: string };
   messages: DemoMessage[];
-  history: { at: string; text: string }[];
+  history: { at: string; kind: "received" | "assigned" | "state"; title: string; description: string; actor: string }[];
 };
 
 export const demoOpportunities: DemoOpportunity[] = [
@@ -45,7 +45,7 @@ export const demoOpportunities: DemoOpportunity[] = [
       { id: "demo-mensaje-ana-1", sender: "Cliente", at: "2026-11-17T09:10:00-03:00", text: "Hola, me interesa un Corolla automático. Quiero comprar este mes y tengo hasta 25.000 dólares." },
       { id: "demo-mensaje-ana-2", sender: "Bot", at: "2026-11-17T09:11:00-03:00", text: "Gracias por contarnos. Un vendedor va a continuar con tu consulta." },
     ],
-    history: [{ at: "2026-11-17T09:10:00-03:00", text: "Ingreso en espera · Nueva consulta · Recepción de demostración." }],
+    history: [{ at: "2026-11-17T09:10:00-03:00", kind: "received", title: "La consulta ingresó en espera", description: "Nueva consulta por Toyota Corolla. Pendiente de asignación a un vendedor.", actor: "Recepción de demostración" }],
   },
   {
     id: "demo-consulta-bruno", clientId: "demo-bruno", vehicleId: "demo-cronos", assigned: true,
@@ -58,9 +58,9 @@ export const demoOpportunities: DemoOpportunity[] = [
       { id: "demo-mensaje-bruno-4", sender: "Cliente", at: "2026-11-16T15:24:00-03:00", text: "Sí, después de las 17 me queda bien." },
     ],
     history: [
-      { at: "2026-11-16T15:00:00-03:00", text: "Ingreso en espera · Nueva consulta · Recepción de demostración." },
-      { at: "2026-11-16T15:15:00-03:00", text: "Sin responsable → Vendedor de demostración · Asignación Admin de ejemplo." },
-      { at: "2026-11-16T15:20:00-03:00", text: "Nueva consulta → En seguimiento · Vendedor de demostración." },
+      { at: "2026-11-16T15:00:00-03:00", kind: "received", title: "La consulta ingresó en espera", description: "Nueva consulta por Fiat Cronos. Sin responsable al momento del ingreso.", actor: "Recepción de demostración" },
+      { at: "2026-11-16T15:15:00-03:00", kind: "assigned", title: "Se asignó un responsable", description: "Sin responsable → Vendedor de demostración", actor: "Admin de demostración" },
+      { at: "2026-11-16T15:20:00-03:00", kind: "state", title: "Comenzó el seguimiento comercial", description: "Nueva consulta → En seguimiento", actor: "Vendedor de demostración" },
     ],
   },
 ];
@@ -77,10 +77,19 @@ export const demoPurchases = [
 
 export const vehicleName = (vehicle: DemoVehicle) => `${vehicle.brand} ${vehicle.model}`;
 export const demoMoney = (amount: number, currency: string) => `${currency} ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(amount)}`;
-export const demoDate = (date: string) => new Intl.DateTimeFormat("es-AR", {
-  timeZone: "America/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric",
-  ...(date.includes("T") ? { hour: "2-digit", minute: "2-digit" } as const : {}),
-}).format(new Date(date.includes("T") ? date : `${date}T12:00:00-03:00`));
+export function demoDateParts(date: string) {
+  const parts = new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23", numberingSystem: "latn",
+  }).formatToParts(new Date(date.includes("T") ? date : `${date}T12:00:00-03:00`));
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)!.value;
+  return { date: `${value("day")}/${value("month")}/${value("year")}`, time: date.includes("T") ? `${value("hour")}:${value("minute")}` : null };
+}
+export const demoDate = (date: string) => {
+  const parts = demoDateParts(date);
+  return `${parts.date}${parts.time ? ` · ${parts.time} h` : ""}`;
+};
+export const demoCount = (count: number, singular: string, plural: string) => `${count} ${count === 1 ? singular : plural}`;
 export const demoMatches = (text: string, query: string) => {
   const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   return normalize(text).includes(normalize(query.trim()));

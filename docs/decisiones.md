@@ -2,7 +2,11 @@
 
 Fecha: 17 de noviembre de 2026. Alcance: modelo documental y frontend visual. No autoriza implementación de integraciones.
 
-Las observaciones visuales reportadas al preparar el primer PR se registran por separado en [pendientes-frontend.md](pendientes-frontend.md), para revisión el 18/11/2026. Su corrección queda fuera de este cierre de rama.
+Las observaciones visuales reportadas al preparar el primer PR se registran por separado en [pendientes-frontend.md](pendientes-frontend.md). El 18/11/2026 el usuario autorizó corregirlas y mejorar las filas y cronologías en todas las vistas.
+
+## Actualización visual — 18/11/2026
+
+Se adopta una paleta provisional blanca, negra y gris con acentos rojos, tomando sólo los colores de la referencia enviada. La fotografía del logo no se incorpora. Se mantiene la marca tipográfica existente hasta recibir un manual o recursos oficiales. Listados, historial, actividades, recontactos y compras comparten componentes visuales; los mensajes distinguen autor, fecha y evidencia. Estos cambios no modifican el modelo propuesto ni habilitan operaciones comerciales.
 
 ## Actualización: muestra local autorizada
 
@@ -55,5 +59,6 @@ Los listados principales muestran ahora la muestra local; las fichas vacías con
 | D16 | ¿Quién administra cuentas, roles y zonas? | Gestionar responsables está confirmado; administrar identidades no necesariamente. Alta futura de los dos Admin, protección de la última cuenta y bajas. |
 | D17 | ¿Qué se conserva, por cuánto tiempo y quién corrige? | Mensajes, adjuntos, evidencia, contactos y compras; anonimización, auditoría y registros dados de baja. Sin plazos inventados. |
 | D18 | ¿Qué criterio ordenará la asignación automática? | Prioridad, equidad, antigüedad o score; casos sin vendedores disponibles y liberación de leads. Toda consulta comercial se deriva independientemente del score. |
+| D19 | ¿Cuál es el manual de marca definitivo? | Confirmar tipografías, tono exacto del rojo, logotipo autorizado y reglas de uso. La paleta actual es una interpretación provisional de la referencia, sin incorporar su fotografía. |
 
 Antes de integrar datos deben resolverse especialmente D01–D07, D10–D12 y la visibilidad/retención. Resolver decisiones no forma parte de esta implementación visual.
