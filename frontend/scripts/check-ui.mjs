@@ -15,6 +15,7 @@ const base = process.argv.find((arg) => /^https?:/.test(arg)) ?? 'http://127.0.0
 assert(['127.0.0.1', 'localhost'].includes(new URL(base).hostname), 'Usar un servidor local.');
 const hmr = process.argv.includes('--hmr');
 const publicOnly = process.argv.includes('--public-only');
+const inventoryOnly = process.argv.includes('--inventory');
 const smoke = process.argv.includes('--smoke');
 const root = fileURLToPath(new URL('../', import.meta.url));
 const credentialsPath = join(root, '.env.demo.local');
@@ -81,7 +82,8 @@ try {
   }
   async function go(route) {
     await send('Page.navigate', { url: base + route });
-    await until(`location.pathname === ${JSON.stringify(route)} && document.readyState === 'complete' && !!document.querySelector('h1')`);
+    const target = new URL(base + route);
+    await until(`location.pathname === ${JSON.stringify(target.pathname)} && location.search === ${JSON.stringify(target.search)} && document.readyState === 'complete' && !!document.querySelector('h1')`);
     await delay(200);
   }
   async function change(selector, value) {
@@ -158,13 +160,145 @@ try {
     assert.deepEqual(errors, [], 'Errores de consola en acceso público');
     console.log('OK: login responsive y cuatro rutas protegidas sin sesión. No se probaron cuentas reales.');
     await send('Browser.close');
+  } else if (inventoryOnly) {
+    await signIn('admin');
+    await go('/vehiculos');
+    await until(`!!document.querySelector('.inventory-filters') && Object.keys(document.querySelector('.inventory-filters')).some(key => key.startsWith('__reactProps'))`);
+    const firstVehicle = await evaluate(`(() => { const row = document.querySelector('.inventory-catalog-row'); return row ? { route: new URL(row.href).pathname, name: row.querySelector('h2').textContent } : null; })()`);
+    const timeOrigin = await evaluate('performance.timeOrigin');
+    await change('input[name="q"]', 'NO-EXISTE-QA-987654');
+    await until(`!document.querySelector('[data-pending]') && location.search.includes('NO-EXISTE-QA-987654') && !document.querySelector('.inventory-catalog-row')`);
+    await click('Limpiar');
+    await until(`!document.querySelector('[data-pending]') && location.search === ''`);
+    if (firstVehicle) {
+      // Escribir mientras hay una navegación pendiente y combinar filtros no pierde caracteres.
+      for (const value of [firstVehicle.name.slice(0, 1), firstVehicle.name.slice(0, 3), firstVehicle.name]) await change('input[name="q"]', value);
+      await change('select[name="stock"]', 'available');
+      await change('select[name="stock"]', '');
+      await until(`!document.querySelector('[data-pending]') && new URLSearchParams(location.search).get('q') === ${JSON.stringify(firstVehicle.name)} && !!document.querySelector('.inventory-catalog-row')`);
+      assert.equal(await evaluate(`document.querySelector('input[name="q"]').value`), firstVehicle.name);
+      const withSpace = firstVehicle.name + ' ';
+      await change('input[name="q"]', withSpace);
+      await until(`!document.querySelector('[data-pending]')`);
+      assert.equal(await evaluate(`document.querySelector('input[name="q"]').value`), withSpace, 'Una pausa no borra el espacio que se acaba de escribir');
+    }
+    await evaluate(`document.querySelector('input[name="q"]').focus()`);
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+    await until(`!document.querySelector('[data-pending]')`);
+    assert.equal(await evaluate('performance.timeOrigin'), timeOrigin, 'Búsqueda y Enter no recargan el documento');
+    assert.equal(await evaluate(`document.activeElement.name`), 'q', 'Búsqueda mantiene el foco');
+    await change('select[name="archived"]', 'true');
+    await until(`!document.querySelector('[data-pending]') && new URLSearchParams(location.search).get('archived') === 'true'`);
+    await click('Limpiar');
+    await until(`!document.querySelector('[data-pending]') && location.search === ''`);
+    const availableYear = await evaluate(`document.querySelector('select[name="year"] option[value]:not([value=""])')?.value ?? null`);
+    if (availableYear) {
+      await change('select[name="year"]', availableYear);
+      await change('select[name="transmission"]', 'automatic');
+      await until(`!document.querySelector('[data-pending]') && new URLSearchParams(location.search).get('year') === ${JSON.stringify(availableYear)} && new URLSearchParams(location.search).get('transmission') === 'automatic'`);
+      const match = await evaluate(`document.querySelector('.inventory-catalog-row')?.getAttribute('href') ?? null`);
+      if (match) {
+        await evaluate(`document.querySelector('.inventory-catalog-row').click()`);
+        await until(`!!document.querySelector('.inventory-filter-summary') && !!document.querySelector('.inventory-unit')`);
+        await check('Ficha con año y transmisión de la búsqueda');
+        assert.match(await evaluate(`document.querySelector('.inventory-unit h3').textContent`), new RegExp(availableYear));
+      }
+    }
+    if (firstVehicle) {
+      await go(firstVehicle.route);
+      const pricedUnit = await evaluate(`(() => {
+        const text = [...document.querySelectorAll('.inventory-price')].map(el => el.textContent).find(value => /^(USD|ARS) /.test(value));
+        return text ? { currency: text.slice(0, 3), price: text.slice(4).replaceAll('.', '').replace(',', '.') } : null;
+      })()`);
+      if (pricedUnit) {
+        await go('/vehiculos');
+        await until(`Object.keys(document.querySelector('.inventory-filters')).some(key => key.startsWith('__reactProps'))`);
+        const priceOrigin = await evaluate('performance.timeOrigin');
+        await change('input[name="q"]', firstVehicle.name);
+        await change('input[name="min_price"]', pricedUnit.price);
+        await until(`!!document.querySelector('#price-filter-error') && !document.querySelector('[data-pending]')`);
+        await change('select[name="currency"]', pricedUnit.currency);
+        await change('input[name="max_price"]', '0');
+        await until(`!document.querySelector('[data-pending]') && document.querySelector('#price-filter-error')?.textContent.includes('mínimo')`);
+        await change('input[name="max_price"]', pricedUnit.price);
+        await until(`!document.querySelector('[data-pending]') && !document.querySelector('#price-filter-error') && !!document.querySelector('.inventory-catalog-row')`);
+        assert.equal(await evaluate(`new URLSearchParams(location.search).get('min_price')`), pricedUnit.price);
+        assert.equal(await evaluate('performance.timeOrigin'), priceOrigin, 'Precios no recargan el documento');
+        await capture('inventario-precios');
+        await evaluate(`document.querySelector('.inventory-catalog-row').click()`);
+        await until(`!!document.querySelector('.inventory-filter-summary') && !!document.querySelector('.inventory-unit')`);
+        assert.match(await evaluate(`document.querySelector('.inventory-filter-summary').textContent`), new RegExp(pricedUnit.currency));
+        await go('/vehiculos');
+        await until(`Object.keys(document.querySelector('.inventory-filters')).some(key => key.startsWith('__reactProps'))`);
+        await change('select[name="currency"]', pricedUnit.currency);
+        await change('input[name="max_price"]', '0');
+        await until(`!document.querySelector('[data-pending]') && new URLSearchParams(location.search).get('max_price') === '0' && !document.querySelector('.inventory-catalog-row')`);
+        await click('Limpiar');
+        await until(`!document.querySelector('[data-pending]') && location.search === ''`);
+        assert.equal(await evaluate(`document.querySelector('input[name="max_price"]').value`), '');
+      }
+    }
+    console.log('OK: búsqueda dinámica, año/transmisión, rango de precios y moneda, limpieza, foco y Enter sin recarga.');
+    for (const width of [1440, 768, 390, 320]) {
+      await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width <= 390 });
+      await go('/vehiculos');
+      await check(`${width} catálogo real`);
+      assert.equal(await evaluate(`!!document.querySelector('.preview-banner')`), false);
+      assert.equal(await evaluate(`!!document.querySelector('.inventory-filters')`), true);
+      await capture(`inventario-${width}`);
+      if (firstVehicle) {
+        await go(firstVehicle.route);
+        await until(`!!document.querySelector('.inventory-units, .empty-state')`);
+        await check(`${width} ficha real`);
+        await capture(`ficha-inventario-${width}`);
+        const unitCode = await evaluate(`document.querySelector('.inventory-unit-top p strong')?.textContent ?? null`);
+        if (unitCode && await evaluate(`!!document.querySelector('button[aria-label^="Editar unidad"]')`)) {
+        await click('Editar unidad');
+        await until(`!!document.querySelector('dialog[open]')`);
+        assert.equal(await evaluate(`!!document.querySelector('input[name="internal_code"]')`), false);
+        assert.equal(await evaluate(`document.querySelector('dialog').textContent.includes('Código interno')`), false);
+        assert.equal(await evaluate(`document.activeElement.name`), 'version');
+        await check(`${width} edición sin guardar`);
+        await capture(`unidad-inventario-${width}`);
+        await click('Cancelar');
+        await until(`!document.querySelector('dialog[open]')`);
+        assert.match(await evaluate(`document.activeElement.textContent`), /Editar unidad/);
+        }
+        await click('Agregar unidad');
+        await until(`!!document.querySelector('dialog[open]')`);
+        assert.equal(await evaluate(`document.querySelector('dialog').textContent.includes('Código interno')`), false);
+        await capture(`agregar-unidad-${width}`);
+        await click('Cancelar');
+      }
+      await go('/vehiculos/nuevo');
+      await until(`!!document.querySelector('.inventory-form') && Object.keys(document.querySelector('.inventory-form')).some(key => key.startsWith('__reactProps'))`);
+      await check(`${width} alta real`);
+      await click('Crear vehículo');
+      await until(`document.querySelectorAll('.field-error').length === 2`);
+      assert.equal(await evaluate(`document.activeElement.name`), 'brand');
+      assert.equal(await evaluate(`document.querySelectorAll('label .required-mark').length`), 2);
+      assert.equal(await evaluate(`getComputedStyle(document.querySelector('.required-mark')).color`), 'rgb(197, 38, 49)');
+      await capture(`alta-inventario-${width}`);
+      console.log(`OK: catálogo conectado, alta vacía bloqueada, foco y asteriscos a ${width}px.`);
+    }
+    await writeFile(join(output, 'report-inventory.json'), JSON.stringify({ assertions, errors }, null, 2));
+    assert.deepEqual(errors, [], 'Errores en inventario');
+    await click('Salir');
+    await until(`location.pathname === '/login'`);
+    await send('Browser.close');
   } else {
-  const routes = smoke ? ['/', '/clientes/demo-bruno', '/oportunidades/demo-consulta-bruno', '/vehiculos/demo-corolla/editar'] : ['/', '/clientes', '/vehiculos', '/clientes/demo-ana', '/clientes/demo-bruno', '/oportunidades/demo-consulta-ana', '/oportunidades/demo-consulta-bruno', '/vehiculos/demo-corolla', '/vehiculos/demo-cronos', '/vehiculos/demo-corolla/editar', '/vehiculos/nuevo', '/clientes/vista-previa', '/oportunidades/vista-previa', '/vehiculos/vista-previa/editar'];
+  const routes = smoke ? ['/', '/clientes/demo-bruno', '/oportunidades/demo-consulta-bruno', '/vehiculos'] : ['/', '/clientes', '/vehiculos', '/clientes/demo-ana', '/clientes/demo-bruno', '/oportunidades/demo-consulta-ana', '/oportunidades/demo-consulta-bruno', '/vehiculos/nuevo', '/clientes/vista-previa', '/oportunidades/vista-previa'];
   for (const width of (smoke ? [1440, 390] : [1440, 768, 390, 320])) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width <= 390 });
     for (const role of ['vendedor', 'admin']) {
       await signIn(role);
       for (const route of routes) {
+        if (role === 'vendedor' && route === '/vehiculos/nuevo') {
+          await send('Page.navigate', { url: base + route });
+          await until(`location.pathname === '/acceso-denegado' && !!document.querySelector('h1')`);
+          continue;
+        }
         await go(route);
         await check(`${width} ${route} ${role}`);
         if (route.endsWith('/editar') || route.endsWith('/nuevo')) assert.equal(await evaluate(`!!document.querySelector('main form')`), role === 'admin', 'Formulario Admin');
@@ -206,18 +340,15 @@ try {
   await change('input[type=search]', 'martinez');
   assert.match(await evaluate(`document.querySelector('.panel-footer').textContent`), /1 cliente de ejemplo/);
   await go('/vehiculos');
-  await change('select[aria-label="Filtrar por stock"]', 'sin-stock');
-  assert.match(await evaluate(`document.querySelector('.panel-footer').textContent`), /1 vehículo de ejemplo/);
-  assert.match(await evaluate(`document.querySelector('.demo-list').textContent`), /Cronos/);
+  assert.equal(await evaluate(`!!document.querySelector('.inventory-filters')`), true);
+  assert.equal(await evaluate(`!!document.querySelector('.preview-banner')`), false);
   await go('/oportunidades/demo-consulta-ana');
   await click('Historial'); await click('Ver mensaje original');
   await until(`document.activeElement.id === 'demo-mensaje-ana-1'`);
   await go('/clientes/demo-bruno');
   assert.deepEqual(await evaluate(`[...document.querySelectorAll('.metric > strong')].map(el => el.textContent)`), ['1', '4', '1', '1']);
-  await go('/vehiculos/demo-corolla');
-  await evaluate(`document.querySelector('a[href="/vehiculos/demo-corolla/editar"]').click()`);
-  await until(`location.pathname.endsWith('/editar') && !!document.querySelector('form')`);
-  assert.equal(await evaluate(`document.querySelector('input[name=marca]').value`), 'Toyota');
+  await go('/vehiculos/nuevo');
+  assert.equal(await evaluate(`document.querySelector('input[name=brand]').value`), '');
   await go('/usuarios');
   await until(`!!document.querySelector('.users-table')`);
   await click('Editar');

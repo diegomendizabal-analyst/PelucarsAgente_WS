@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "check:ui": "node scripts/check-ui.mjs",
     "test:auth": "node --test scripts/auth-validation.test.mjs",
+    "test:inventory": "node --test scripts/inventory-validation.test.mjs",
     "check:auth": "node scripts/check-auth.mjs",
     "users:bootstrap": "node scripts/bootstrap-demo.mjs"
   },

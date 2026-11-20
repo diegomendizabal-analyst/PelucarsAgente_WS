@@ -13,7 +13,7 @@
 - Deshabilitar conserva historial y no reasigna oportunidades. Se pone disponibilidad en false. La política operativa de disponibilidad todavía no está implementada.
 - Salir revoca la sesión actual y limpia sus cookies. Recuperación por correo, cambio de contraseña autoservicio y cambio de correo quedan para el siguiente incremento; las cuentas de esta demo usan direcciones `.example`, sin bandeja real ni envío de emails.
 
-Las pantallas comerciales todavía usan datos ficticios locales y lo indican en su banner. No representan una cartera real ni implementan aún la visibilidad comercial de V2. El selector Admin/Vendedor se retiró; la presentación usa el rol real. Ningún dato comercial se guarda en Supabase en esta etapa.
+Oportunidades y clientes todavía usan datos ficticios locales y lo indican en su banner. No representan una cartera real ni implementan aún la visibilidad comercial de V2. El selector Admin/Vendedor se retiró; la presentación usa el rol real. El incremento posterior al PR #3 conecta vehículos e inventario a Supabase; su estado y pruebas se describen en [frontend.md](frontend.md).
 
 ## Configuración local
 

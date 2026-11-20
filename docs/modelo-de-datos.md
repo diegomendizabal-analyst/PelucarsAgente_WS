@@ -2,7 +2,7 @@
 
 Fuente: [modelo recibido](referencias/modelo-backend-v1-2026-11-19.md), reconciliado con las conclusiones del [alcance V2](referencias/alcance-v2-2026-11-19.md). Los originales se conservan sin editar. El [diseño del 17/11](historico/modelo-de-datos-2026-11-17.md) es histórico y ya no define esta etapa.
 
-Implementación del 19/11/2026: identidad (`profiles`, `user_admin_events`) aplicada en Supabase, autenticación y administración básica de vendedores implementadas. La migración y sus pruebas están en `supabase/`; los resultados de ejecución remota se registran en [autenticacion.md](autenticacion.md). El resto del modelo sigue siendo diseño, no tablas ya creadas.
+Implementación del 19/11/2026: identidad (`profiles`, `user_admin_events`) y catálogo/inventario (`vehicles`, `inventory_units`, `inventory_events`) aplicados en Supabase. Login, gestión de vendedores y administración de inventario conectados al frontend. Las migraciones y sus pruebas están en `supabase/`; ver [autenticacion.md](autenticacion.md) y [frontend.md](frontend.md). Clientes, oportunidades, conversaciones, ventas y seguimiento siguen siendo diseño y muestra visual, no tablas creadas.
 
 ---
 
@@ -38,6 +38,9 @@ erDiagram
     LEADS ||--o{ LEAD_INTERESTS : busca
     VEHICLES o|--o{ LEAD_INTERESTS : modelo
     VEHICLES ||--o{ INVENTORY_UNITS : unidades
+    VEHICLES ||--o{ INVENTORY_EVENTS : cambios
+    INVENTORY_UNITS o|--o{ INVENTORY_EVENTS : unidad
+    PROFILES ||--o{ INVENTORY_EVENTS : actor
     LEADS ||--o{ LEAD_OFFERS : recibe
     VEHICLES ||--o{ LEAD_OFFERS : ofrecido
     INVENTORY_UNITS o|--o{ LEAD_OFFERS : unidad_opcional
@@ -115,16 +118,16 @@ La asignación pertenece a la oportunidad, no a customers. El responsable anteri
 | --- | --- | --- |
 | id | uuid PK | Ficha de catálogo. |
 | brand, model | text, requeridos | Marca y modelo identificados. |
-| normalized_key | text UNIQUE | Clave normalizada marca/modelo para deduplicación. |
+| search_name | text generado | Marca/modelo en minúsculas para búsqueda. Un índice único sobre ambas columnas normalizadas evita duplicados por mayúsculas o espacios. |
 | origin | text | admin o intake; trazabilidad del origen. |
 | needs_review | boolean | Indica identificación automática que requiere revisión. |
-| created_by | uuid FK profiles, nullable | Administrador creador; vacío para automatización. |
+| created_by | uuid FK profiles, requerido en esta etapa | Administrador creador. La futura automatización requerirá revisar su identidad de servicio y esta restricción. |
 | archived_at | timestamptz NULL | Retira la ficha de vistas habituales conservando relaciones. |
 | created_at, updated_at | timestamptz | Fechas. |
 
 No tiene precio, moneda ni booleano de stock editable: se obtienen de sus unidades. Una ficha sin unidades devuelve precio y moneda NULL y stock disponible 0 en la proyección del frontend.
 
-La automatización de ingreso puede crear fichas mediante una operación restringida. Esto no concede a los vendedores ABM del catálogo. Reutiliza coincidencias normalizadas; no fusiona modelos diferentes por una similitud incierta.
+La futura automatización de ingreso podrá crear fichas mediante una operación restringida aún no implementada. Hoy sólo los administradores crean fichas. No se fusionan modelos diferentes por similitud incierta ni se eliminan acentos al deduplicar.
 
 Si no hay identificación suficiente (por ejemplo solo automático 2021), se conserva el texto y los criterios en lead_interests sin FK a catálogo. Para Toyota Hilux sin año sí se puede crear/reutilizar el modelo; no se inventa versión ni año.
 
@@ -134,14 +137,15 @@ Si no hay identificación suficiente (por ejemplo solo automático 2021), se con
 | --- | --- | --- |
 | id | uuid PK | Identidad de la unidad física. |
 | vehicle_id | uuid FK vehicles, requerido | Modelo al que pertenece. |
-| internal_code | text UNIQUE, requerido | Identificador interno de stock. |
+| internal_code | text UNIQUE, generado | Identificador interno de stock `PEL-<número>`. No editable por las operaciones del sistema. Los códigos anteriores se conservan. |
 | model_year | smallint NULL hasta completar | Año real, no el deseado por el cliente. |
 | version, transmission | text NULL | Características conocidas. |
+| transmission_kind | text generado, NULL si se desconoce | Categoría para filtros: automatic, manual u other; derivada de transmission sin alterar el texto existente. |
 | mileage_km | integer NULL | Kilometraje no negativo. |
 | listed_price | numeric(14,2) NULL | Precio publicado vigente, mayor que cero cuando existe. |
 | currency | char(3) NULL | Obligatoria junto con el precio; ambos nulos o ambos informados. |
 | status | text, requerido | available, sold o withdrawn. |
-| received_at | timestamptz NULL | Ingreso registrado al inventario. |
+| received_at | date NULL | Fecha de ingreso al inventario, sin hora ni conversión de zona horaria. |
 | created_at, updated_at | timestamptz | Fechas. |
 
 Un registro representa una unidad real, no una cantidad por modelo. Marca/modelo vienen de vehicles. Si el importe no está informado, el panel lo indica; el precio de venta final sí debe informarse al confirmar.
@@ -149,6 +153,26 @@ Un registro representa una unidad real, no una cantidad por modelo. Marca/modelo
 La ficha agregada se considera En stock si tiene al menos una unidad available; Sin stock si no tiene ninguna. No tratar unidades sold o withdrawn como disponibles. No sumar precios en monedas diferentes ni mostrar un único precio si hay unidades con importes distintos.
 
 La referencia del sistema externo y su identidad se definirán tras la reunión de integración. No asumir un external_id obligatorio ni crear un sincronizador ahora.
+
+Implementado en `20261119162242_vehicle_inventory.sql`: código interno único sin distinguir mayúsculas/espacios exteriores; precio positivo con hasta dos decimales y moneda ARS/USD, ambos informados o ambos NULL. Año opcional de cuatro cifras y kilometraje entero no negativo. Versión y transmisión son textos opcionales. No se exige patente/VIN ni se inventa una identidad externa.
+
+Revisión `20261120121950_inventory_codes_and_filters.sql`: `private.inventory_unit_code_seq` genera el código al insertar. La operación de alta ignora códigos proporcionados por clientes anteriores; la edición conserva la identidad original. No se renumeran unidades existentes. La secuencia es segura frente a altas concurrentes y puede tener saltos, incluso después de pruebas con rollback o altas fallidas; no es un contador de stock.
+
+El selector ofrece Manual, Automática, Otra y Sin informar, y conserva una opción con el texto previo cuando éste difiere. `transmission_kind` reconoce también CVT/DSG como automáticas y mecánica como manual, sin distinción de mayúsculas o tildes; otros textos pertenecen a other, y NULL no se incluye en ninguna categoría específica. Índice de características por año, categoría y ficha.
+
+Las funciones de lectura `search_vehicle_catalog` e `inventory_filter_years` son invoker, limitadas a authenticated y sujetas a RLS. La primera busca marca/modelo como texto literal, cuenta coincidencias de año/transmisión en una misma unidad y se pagina en servidor. Con stock disponible exige que la unidad coincidente esté disponible. Sin stock significa cero disponibles en toda la ficha; con stock Todos pueden coincidir unidades retiradas/vendidas. Los totales de la ficha siguen representando todas sus unidades, aunque el detalle muestre sólo las filtradas.
+
+`20261120132113_inventory_price_filters.sql` amplía la búsqueda con una firma de ocho argumentos: añade `p_currency text`, `p_min_price numeric` y `p_max_price numeric`, conservando la firma previa para compatibilidad. Precio mínimo/máximo son inclusivos, independientes y no negativos; cualquier límite requiere ARS/USD. Un rango invertido, negativo o con moneda inválida devuelve cero coincidencias y el frontend muestra la validación. El importe y la moneda deben pertenecer a la misma unidad que cumple las demás características. Unidades sin precio no satisfacen filtros de precio/moneda. Índice por `(vehicle_id, currency, listed_price)`. No cambia datos de unidades ni aplica tasas de cambio; el widget/conversor está pendiente en [decisiones.md](decisiones.md).
+
+Las operaciones públicas validan administrador habilitado en la base. `save_vehicle`, `save_inventory_unit` y `set_vehicle_archived` usan wrappers invoker e implementaciones privadas definer con search_path vacío. No hay escritura directa de usuarios autenticados. Vendedores habilitados consultan catálogo/unidades, incluidas fichas dadas de baja para conservar consulta histórica; la auditoría es sólo admin. La vista `vehicle_catalog` es security_invoker y devuelve conteos sujetos a RLS.
+
+Las ediciones requieren el `updated_at` leído; un cambio concurrente se rechaza para evitar sobrescrituras. La baja del catálogo exige cero unidades disponibles. Alta/edición de unidades y baja de catálogo bloquean primero la misma ficha para serializar cambios de stock. Restaurar una ficha no cambia estados de sus unidades. Inventario sólo permite estados `available`/`withdrawn`; `sold` queda reservado al futuro flujo transaccional de ventas y una unidad vendida no puede reabrirse desde este módulo.
+
+## inventory_events
+
+id uuid PK; vehicle_id uuid FK vehicles requerido; unit_id uuid FK inventory_units NULL; actor_id uuid FK profiles requerido; action text; changes jsonb; occurred_at timestamptz.
+
+Registra altas/ediciones de fichas, altas/ediciones de unidades y baja/restauración de catálogo dentro de la misma transacción. Conserva datos anteriores/nuevos. No hay borrado físico desde el sistema. La consulta visual de esta auditoría queda para una etapa posterior.
 
 # Oportunidad e interés
 

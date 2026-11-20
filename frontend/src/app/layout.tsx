@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./records.css";
 import "./auth.css";
+import "./inventory.css";
 
 export const metadata: Metadata = {
   title: { default: "Pelucars · Gestión comercial", template: "%s · Pelucars" },

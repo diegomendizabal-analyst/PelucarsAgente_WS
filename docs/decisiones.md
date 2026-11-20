@@ -1,5 +1,5 @@
 # Decisiones vigentes — Pelucars
-Actualizado el 19/11/2026. Fuentes: [alcance V2](referencias/alcance-v2-2026-11-19.md) y [modelo backend V1](referencias/modelo-backend-v1-2026-11-19.md), conservados tal como se recibieron. Las conclusiones de la tabla del alcance actualizan los párrafos anteriores cuando hay diferencias. Las contradicciones restantes se explicitan, sin convertirlas en reglas de código.
+Actualizado el 20/11/2026. Fuentes: [alcance V2](referencias/alcance-v2-2026-11-19.md) y [modelo backend V1](referencias/modelo-backend-v1-2026-11-19.md), conservados tal como se recibieron. Las conclusiones de la tabla del alcance actualizan los párrafos anteriores cuando hay diferencias. Las contradicciones restantes se explicitan, sin convertirlas en reglas de código.
 
 El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus identificadores D01–D19 no equivalen a los del alcance V2. El [modelo vigente](modelo-de-datos.md) sustituye el diseño inicial.
 
@@ -18,12 +18,29 @@ El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus id
 - Cinco estados: Nueva consulta, En seguimiento, Vendido, Perdido y En espera de stock. Este último nombre ya está definido (D14).
 - Ventas registradas explícitamente por responsable/admin, con actualización transaccional de la unidad vendida. El administrador gestiona inventario (D17).
 - El catálogo reside en Supabase y se administra desde el panel; bot sin catálogo, precios ni stock en V1.
+- Separación confirmada el 19/11: ficha por marca/modelo; versión, año, precio y características en cada unidad física. El stock disponible se calcula por unidades, no se edita como cantidad. Datos desconocidos opcionales.
+- Revisión del 20/11: el código interno de unidad se genera en la base (`PEL-<número>`) y no se ingresa ni se modifica en los formularios. Los códigos existentes se conservan. La secuencia puede tener saltos; no representa cantidad de stock. La referencia del sistema externo será independiente y sigue pendiente de definición.
+- Búsqueda del 20/11: marca/modelo al escribir con pausa de 300 ms; stock, catálogo, año y transmisión al cambiar. Año/transmisión y, cuando se pide, disponibilidad deben coincidir en la misma unidad. No se cruzan características de autos diferentes. La búsqueda se realiza en la base antes de paginar.
+- Rango de precios del 20/11: mínimo y máximo inclusivos y opcionales; se exige ARS o USD si se usa un límite. Se compara el precio publicado en su moneda original, en la misma unidad que cumple año, transmisión y stock. No convierte importes; precios desconocidos quedan fuera de un filtro por precio/moneda. Los rangos inválidos muestran una indicación y no se interpretan como una búsqueda sin límites.
+- Primera implementación de inventario: admin crea/edita y da de baja/restaura fichas sin unidades disponibles; retira o vuelve a disponer unidades. Vendedor consulta. Marcar vendido requiere el futuro módulo comercial y no está habilitado en inventario.
 - Se conserva el interés original aunque la venta sea de una alternativa. La llegada de stock no reabre ni contacta automáticamente.
 - Fotografías, dashboards y chat privado del vendedor fuera de V1.
 
 ## Primera implementación autorizada
 
-Login/logout, perfiles, habilitación, auditoría y alta/edición básica de vendedores. Migración de identidad y cuentas iniciales de demo. Las operaciones comerciales siguen siendo una muestra local: no se conectan silenciosamente al nuevo esquema.
+### Propuesta pendiente: widget de cotización USD/ARS
+
+El usuario propone un widget compacto, siempre visible en el centro de la barra superior, con valor obtenido de una API y botón **Actualizar**. El tipo de dólar se conversará con el cliente; no está definido ni implementado todavía.
+
+- Resolver con el cliente fuente/proveedor, tipo de dólar (oficial, MEP, blue o cotización propia), compra/venta y uso comercial de la referencia. Definir si el futuro conversor será sólo una calculadora o también permitirá comparar unidades de monedas diferentes.
+- Propuesta visual: tipo de cotización, valor en ARS por USD, fecha/hora de la fuente y botón Actualizar; en móvil, un indicador compacto que despliegue el detalle. El conversor podría abrirse desde el mismo widget.
+- Propuesta técnica: consultar desde servidor y compartir un valor cacheado, con intervalo de vigencia y límite de actualizaciones por definir. Ante fallo, conservar la última cotización con fecha y aviso de desactualización, o mostrar Sin cotización si nunca hubo una. Nunca reemplazarla por un valor aproximado silencioso.
+- Candidato a evaluar: [DolarAPI, endpoint de dólares](https://dolarapi.com/docs/argentina/operations/get-dolares), cuya documentación expone compra, venta, casa y fechaActualizacion. Es un agregador; confirmar fuente, disponibilidad, límites y condiciones antes de elegirlo. No se conectó al proyecto.
+- Mantener importe y moneda originales del vehículo. Una equivalencia informativa debe indicar la cotización usada y no sobrescribir precios. Si se habilita ajuste manual, definir permisos administrativos y auditoría. Las ventas futuras necesitan conservar su tipo de cambio acordado, no recalcularse con el valor del día.
+
+### Alcance conectado
+
+Login/logout, perfiles, habilitación, auditoría y alta/edición básica de vendedores. Migración de identidad y cuentas iniciales de demo. Después del merge del PR #3 se autorizó y conectó catálogo/inventario en `backend-vehiculos-inventario`. Clientes, oportunidades y seguimiento conservan su muestra local; el inventario empieza vacío, sin copiar vehículos ficticios.
 
 El rol y la habilitación no dependen de metadata editable. El usuario sin perfil completo queda sin acceso. La gestión visible crea únicamente vendedores; las cuentas admin se incorporan mediante procedimiento controlado. La separación entre habilitación y disponibilidad está modelada, con disponibilidad inicialmente false y sin automatización.
 
@@ -44,7 +61,7 @@ El alta de Auth y la inserción de perfil no son una sola transacción. Un fallo
 | D12 | Correos a otros vendedores por pendientes | No incluir sin acuerdo. El correo al asignado es parte del alcance futuro de asignaciones. |
 | D13 | Carga inicial e integración externa | Reunión pendiente; sin importación ni sincronización implícita. |
 | D15 | Devolver oportunidades tras conocer score | Reasignación administrativa como mecanismo confirmado; no agregar devolución automática. |
-| D16 | Granularidad y normalización de catálogo | Adoptar separación catálogo/unidades como diseño; confirmar consolidación y nombres ambiguos antes de conectar inventario. |
+| D16 | Granularidad y normalización de catálogo | Confirmada ficha marca/modelo y unidades con versión/año. Implementada deduplicación por mayúsculas y espacios. Consolidación automática de nombres ambiguos e importación siguen pendientes. |
 | D17 | Anulación/corrección de una venta | Administrar stock está confirmado; faltan trazabilidad, permisos y reversión de venta. No liberar stock por cambiar una etiqueta. |
 
 ## Decisiones técnicas pendientes

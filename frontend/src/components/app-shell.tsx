@@ -20,6 +20,7 @@ export function AppShell({ children, account }: { children: ReactNode; account: 
   const pathname = usePathname();
   const role: PreviewRole = account.role === "admin" ? "admin" : "vendedor";
   const userManagement = pathname.startsWith("/usuarios");
+  const realInventory = pathname.startsWith("/vehiculos");
   const section = userManagement ? "Usuarios" : pathname.startsWith("/clientes") ? "Clientes" : pathname.startsWith("/vehiculos") ? "Vehículos" : "Oportunidades";
   const visibleNavigation = role === "admin" ? [...navigation, { href: "/usuarios", label: "Usuarios", icon: UserRoundCog }] : navigation;
   return <PreviewContext.Provider value={role}>
@@ -36,9 +37,9 @@ export function AppShell({ children, account }: { children: ReactNode; account: 
       </aside>
       <div className="main-frame">
         <header className="topbar"><div className="breadcrumb">Comercial <ChevronRight size={14} /><span>{section}</span></div><div className="account-menu"><div><strong>{account.full_name}</strong><span>{role === "admin" ? "Administrador" : "Vendedor"}</span></div><form action={logout}><button className="button secondary logout-button" title="Cerrar sesión"><LogOut size={15} /><span>Salir</span></button></form></div></header>
-        {!userManagement && <div className="preview-banner"><span className="status-dot" /><span>Datos comerciales ficticios <span className="banner-detail">· Muestra visual compartida. No representa tu cartera real.</span></span><span className="preview-tag">DEMO</span></div>}
+        {!userManagement && !realInventory && <div className="preview-banner"><span className="status-dot" /><span>Datos comerciales ficticios <span className="banner-detail">· Muestra visual compartida. No representa tu cartera real.</span></span><span className="preview-tag">DEMO</span></div>}
         <main id="contenido" className="page-content" tabIndex={-1}>{children}</main>
-        <footer className="page-footer"><span>Pelucars / Gestión comercial</span><span>Acceso autenticado · {userManagement ? "Administración de cuentas" : "Datos comerciales de demostración"}</span></footer>
+        <footer className="page-footer"><span>Pelucars / Gestión comercial</span><span>Acceso autenticado · {userManagement ? "Administración de cuentas" : realInventory ? "Catálogo e inventario" : "Datos comerciales de demostración"}</span></footer>
       </div>
     </div>
   </PreviewContext.Provider>;

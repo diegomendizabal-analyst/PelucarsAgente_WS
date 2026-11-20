@@ -1,3 +1,2 @@
-import { VehicleForm } from "@/components/vehicles";
-export const metadata = { title: "Editar vehículo" };
-export default function Page() { return <VehicleForm mode="edicion" />; }
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/vehiculos/nuevo"); }
