@@ -1,19 +1,8 @@
 import { Suspense } from "react";
 import Loading from "@/app/loading";
-import { notFound } from "next/navigation";
-import { DemoClientDetail } from "@/components/demo-details";
-import { demoClients } from "@/lib/demo-data";
+import { CustomerDetail } from "@/components/crm-detail";
 
-export const metadata = { title: "Cliente de demostración" };
-export function generateStaticParams() {
-  return demoClients.map(({ id }) => ({ id }));
-}
-export default function Page({ params }: { params: Promise<{ id: string }> }) {
-  return <Suspense fallback={<Loading />}><Details params={params} /></Suspense>;
-}
-
-async function Details({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  if (!demoClients.some((item) => item.id === id)) notFound();
-  return <DemoClientDetail key={id} clientId={id} />;
+export const metadata = { title: "Historial del cliente" };
+export default function Page(props: { params: Promise<{ id: string }>; searchParams:Promise<Record<string,string | string[] | undefined>> }) {
+  return <Suspense fallback={<Loading />}><CustomerDetail {...props} /></Suspense>;
 }

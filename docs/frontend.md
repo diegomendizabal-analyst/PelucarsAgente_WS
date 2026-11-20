@@ -1,5 +1,33 @@
 # Frontend visual — Pelucars
 
+## Tipografía actual — Manrope
+
+El bloque **Interés del cliente** distingue el encabezado de sección de cada búsqueda: tarjeta interior con fondo suave, acento lateral para el principal, etiqueta de tipo y descripción destacada. Versión, año y transmisión se muestran con sus propios rótulos cuando existen; el enlace al catálogo queda separado. Los intereses anteriores conservan su etiqueta en un tono neutro. Las mejoras visuales generales propuestas quedan para una versión posterior.
+
+El 20/11 se aprobó Manrope para toda la aplicación. Se carga desde `src/app/fonts/manrope-latin-variable.woff2` mediante `next/font/local`, con pesos variables 200–800, precarga, `display: swap` y fallback Arial ajustado. El archivo latino incluye español, pesa 24.532 bytes y se distribuye con su licencia OFL. No requiere consultas a Google en el build ni desde el navegador.
+
+El cuerpo mantiene 14 px con interlineado 1,6; títulos usan 700 y nombres/subtítulos 600–650. Etiquetas de formularios, ayudas y metadatos principales suben a 12–13 px según su jerarquía. Botones usan 13 px. La paleta blanco/negro/rojo se conserva; el manual de marca futuro puede revisar esta elección.
+
+## Clientes y oportunidades conectados — 20/11/2026
+
+Revisión posterior: las referencias visibles usan **OP-000123**, las consultas recurrentes vuelven al responsable actual de la última consulta si sigue habilitado y la campana avisa al destinatario. Los avisos se consultan cada 45 segundos con pestaña visible, al recuperar foco y al navegar; abrir uno lo marca leído. No envía correo ni WhatsApp. El seed se puede reconstruir con `npm run demo:reset` desde `frontend/` en Windows; ver [pruebas-crm.md](pruebas-crm.md).
+
+Medición local del 20/11, tres cargas por ruta con Chrome y Supabase remoto, sin guardar cambios:
+
+| Pantalla | Mediana de producción antes | Después | Desarrollo después, rutas ya compiladas |
+| --- | --- | --- | --- |
+| Bandeja | 1.406 ms | 687 ms | 711 ms |
+| Clientes | 1.220 ms | 707 ms | 701 ms |
+| Ficha de oportunidad | 1.782 ms | 1.196 ms | 1.020 ms |
+
+Se quitó una consulta de perfil duplicada del proxy en rutas comunes y se sustituyó `getUser()` por verificación de JWT con `getClaims()`; el perfil habilitado/rol se sigue leyendo desde la base en cada petición. Las rutas exclusivas de admin conservan rechazo anticipado en el proxy por el comportamiento de streaming observado antes. No se cachean permisos ni datos privados entre usuarios. La campana carga aparte y no bloquea la página.
+
+Son mediciones orientativas de carga completa (no un benchmark ni una promesa de latencia), con sondeo del DOM de 150 ms y tres muestras; la red y compilación inicial pueden variar. El servidor de desarrollo existente mostró también recargas de Fast Refresh al editar AppShell, que no son navegación normal de producción. Comando reproducible: `npm run check:ui -- http://localhost:3000 --timing`. `--guards` comprueba el rechazo con el JWT de la cuenta de vendedor de demo sin alterar su habilitación.
+
+La rama `backend-clientes-oportunidades` reemplaza las pantallas comerciales de muestra por consultas reales a Supabase. **En espera** sólo expone identificador, ingreso/espera y Sin asignar al vendedor, con **Tomar oportunidad**; el administrador ve el detalle. **Mis oportunidades**, **Todas** (admin), clientes e historial consultan relaciones autorizadas por RLS. Las fichas permiten asignación/reasignación administrativa y cambios de estado, con sus eventos. La demo permite toma voluntaria sin tope provisional.
+
+Las tablas se crearon vacías y luego se autorizó una carga explícita de [cinco clientes y siete oportunidades de prueba](pruebas-crm.md). El ingreso desde el bot, el alta manual desde la interfaz, el motor de score, las actividades y las ventas no están habilitados en este incremento. Las antiguas URLs de demo dejan de mostrar ejemplos y las vistas previas redirigen al listado. No hay actualizaciones en tiempo real; se ofrece **Actualizar**. Recorrido completo, seguridad y límites de verificación en [crm.md](crm.md). Las secciones siguientes describen entregas anteriores; sus referencias a clientes/oportunidades ficticios quedan como antecedente histórico.
+
 ## Inventario conectado — revisión del 20/11/2026
 
 Rama `backend-vehiculos-inventario`, creada desde main después del merge de login. `/vehiculos` consulta Supabase y deja de mostrar el inventario ficticio. Oportunidades y clientes conservan su demo y banner; sus intereses ficticios no enlazan al catálogo real. Las antiguas rutas de vista previa de vehículos redirigen al módulo conectado.
