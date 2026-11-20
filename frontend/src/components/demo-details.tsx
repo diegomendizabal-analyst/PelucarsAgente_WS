@@ -54,7 +54,7 @@ export function DemoOpportunityDetail({ opportunity }: { opportunity: DemoOpport
         <Panel title="Cliente e interés" action={<Link className="text-link" href={`/clientes/${client.id}`}>Ver historial del cliente →</Link>}>
           <Details items={[
             ["Cliente", client.name], ["Contacto", client.email], ["Zona ilustrativa", client.zone],
-            ["Vehículo de interés", <Link key="vehicle" className="text-link" href={`/vehiculos/${vehicle.id}`}>{vehicleName(vehicle)} →</Link>],
+            ["Vehículo de interés", `${vehicleName(vehicle)} · ejemplo ficticio`],
             ["Presupuesto de ejemplo", opportunity.budget], ["Plazo de compra", opportunity.timeframe],
           ]} />
         </Panel>

@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest) {
     if (authenticated && !publicPath) {
       const profile = await supabase.from("profiles").select("is_enabled,role").eq("id", data!.claims.sub).maybeSingle();
       enabled = !profile.error && profile.data?.is_enabled === true;
-      if (request.nextUrl.pathname === "/usuarios" || request.nextUrl.pathname.startsWith("/usuarios/")) {
+      if (request.nextUrl.pathname === "/usuarios" || request.nextUrl.pathname.startsWith("/usuarios/") || request.nextUrl.pathname === "/vehiculos/nuevo" || /^\/vehiculos\/[^/]+\/editar$/.test(request.nextUrl.pathname)) {
         roleAllowed = profile.data?.role === "admin";
       }
     }

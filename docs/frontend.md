@@ -1,5 +1,24 @@
 # Frontend visual — Pelucars
 
+## Inventario conectado — revisión del 20/11/2026
+
+Rama `backend-vehiculos-inventario`, creada desde main después del merge de login. `/vehiculos` consulta Supabase y deja de mostrar el inventario ficticio. Oportunidades y clientes conservan su demo y banner; sus intereses ficticios no enlazan al catálogo real. Las antiguas rutas de vista previa de vehículos redirigen al módulo conectado.
+
+Recorrido:
+
+1. **Vehículos**: búsqueda por marca/modelo al escribir (300 ms de pausa), filtros inmediatos de stock, transmisión, año y activos/dados de baja. Sin recarga completa al escribir ni al presionar Enter. URL compartible, paginación de 20 fichas en servidor y reinicio a primera página al cambiar filtros. Limpiar restablece el catálogo activo. Los años provienen de las unidades registradas, sin opciones ficticias.
+   **Precio publicado** ofrece moneda (ARS/USD), mínimo y máximo. Los límites se aplican al escribir y admiten coma o punto decimal, sin separadores de miles. Pueden usarse por separado y son inclusivos. Sin moneda o con un rango invertido se muestra el error; no se consulta un rango ambiguo. La búsqueda cruza precio, año, transmisión y disponibilidad sobre la misma unidad y conserva los límites al abrir la ficha. No hay conversión entre monedas.
+2. **Crear vehículo** (admin): marca y modelo obligatorios, asteriscos rojos y validación en cliente/servidor. El guardado real muestra confirmación y enlace al detalle.
+3. **Ficha**: conteos compactos y unidades en filas, con versión/año como título, código secundario, precio destacado y texto de características más legible. En móvil se apilan sin desbordamiento. Desde una búsqueda se conservan filtros y se muestran las unidades coincidentes; **Ver todas las unidades** los quita. Los indicadores superiores siempre cuentan toda la ficha. **Editar marca y modelo** abre la edición del catálogo.
+4. **Agregar unidad / Editar unidad**: modal de hasta 840 px, con campos agrupados en dos columnas en escritorio y una en móvil. El código se genera automáticamente sin mostrar un recuadro ni un campo en el formulario. Estado requerido; año, versión, transmisión, kilometraje, precio/moneda y fecha de ingreso opcionales. Precio y moneda se completan juntos. Valores desconocidos se guardan NULL. Transmisión ofrece Manual, Automática, Otra y Sin informar, conservando cualquier texto anterior. No se inventa un año, precio o cantidad.
+5. **Retirada** excluye la unidad del stock sin borrar el registro. Volver a **Disponible** repone stock. **Baja del catálogo** requiere cero disponibles y confirmación explícita; **Restaurar** mantiene los estados de unidades.
+
+El vendedor tiene lectura, sin botones de escritura; las URLs de alta/edición se rechazan antes del render. Acciones y RPC verifican permisos independientemente. Los formularios mantienen valores ante errores, bloquean envíos duplicados y rechazan ediciones desactualizadas. No existe operación de venta, borrado físico, envío de mensajes, integración externa ni importación en este incremento. Auditoría guardada en base, todavía sin pantalla propia.
+
+Migraciones aplicadas: `20261119162242_vehicle_inventory.sql`, `20261120121950_inventory_codes_and_filters.sql` y `20261120132113_inventory_price_filters.sql`. Pruebas SQL de inventario, códigos automáticos, filtros sobre la misma unidad, rangos inclusivos/abiertos, separación de monedas y permisos aprobadas con rollback. Al incorporar el rango de precios había 2 vehículos, 3 unidades y 8 eventos cargados por el usuario; esos conteos se conservaron después de la migración y pruebas. El código existente `1213` se mantiene. Advisors sólo informa la observación ya pendiente de protección de contraseñas filtradas en Auth.
+
+Verificación local: lint, tipos, build y cinco pruebas de validación/filtros. `npm run check:ui -- http://127.0.0.1:3101 --inventory` revisa login admin, búsqueda rápida y Enter sin recarga, filtros inmediatos, año/transmisión, rango exacto de precio, moneda requerida, rango invertido, limpieza y conservación del foco. Comprueba catálogo, ficha real, modal de edición sin guardar, ausencia del recuadro/campo de código en ambos modales, alta de ficha vacía bloqueada y asteriscos en 1440/768/390/320 px. Capturas en `.next/ui-qa/build/`. Las altas/ediciones de unidades, bajas y conflictos se prueban mediante SQL transaccional; no se guardan modificaciones sobre vehículos reales durante la prueba de navegador. No se modifican usuarios para habilitar pruebas; permisos del vendedor se comprueban en SQL.
+
 ## Gestión de usuarios — revisión del 19/11/2026
 
 En `/usuarios`, la lista del equipo ocupa el centro de la pantalla. Incluye búsqueda por nombre, correo o teléfono y filtro de acceso habilitado/deshabilitado. En escritorio se presenta como tabla; en móvil, cada fila agrupa la identidad y sus datos.

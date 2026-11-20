@@ -1,3 +1,2 @@
-import { VehicleDetail } from "@/components/vehicles";
-export const metadata = { title: "Detalle del vehículo" };
-export default function Page() { return <VehicleDetail />; }
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/vehiculos"); }
