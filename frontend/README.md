@@ -1,6 +1,6 @@
 # Pelucars · Frontend
 
-Interfaz interna en español para oportunidades, clientes e inventario. Autenticación, administración de vendedores y catálogo/inventario conectados a Supabase. Oportunidades y clientes conservan su muestra ficticia local.
+Interfaz interna en español para oportunidades, clientes e inventario, conectada a Supabase junto con autenticación y administración de vendedores.
 
 Desde este directorio:
 
@@ -10,9 +10,9 @@ npm run dev
 
 Abrir la URL local indicada por Next.js. En Windows PowerShell, si la política bloquea `npm.ps1`, usar `npm.cmd run dev`.
 
-La navegación ofrece Oportunidades y Clientes de ejemplo, y **Vehículos** con datos reales de Supabase. El rol proviene de la cuenta autenticada. Administradores gestionan **Usuarios** y el inventario: ficha por marca/modelo y unidades físicas con sus características, precio y disponibilidad. Vendedores consultan el inventario sin editar. Las operaciones de oportunidades y ventas siguen pendientes.
+La navegación ofrece Oportunidades, Clientes y Vehículos reales. El rol proviene de la cuenta autenticada. Administradores gestionan Usuarios, inventario y responsables de oportunidades. Vendedores toman consultas en espera (sin tope provisional para la demo), gestionan estados de las propias y consultan inventario. La bandeja de espera oculta identidad e intención hasta la asignación. Las ventas siguen pendientes.
 
-`src/lib/demo-data.ts` conserva los ejemplos de clientes, oportunidades e historial, incluidos sus intereses ficticios. No se importan al inventario real ni se ejecuta seed. El catálogo conectado muestra los vehículos cargados por el usuario.
+`src/lib/demo-data.ts` conserva las muestras de etapas anteriores fuera de las rutas activas. El panel consulta Supabase, donde se autorizaron [cinco clientes y siete oportunidades de prueba](../docs/pruebas-crm.md) para validar el circuito sin bot. La carga es explícita, no se ejecuta al iniciar ni desplegar. Ver [CRM](../docs/crm.md) para alcance y permisos.
 
 Vehículos filtra al escribir y al cambiar stock, catálogo, año o transmisión, sin recarga completa. Las fichas conservan los filtros para mostrar unidades coincidentes. Cada unidad nueva recibe un código interno automático; los códigos existentes permanecen iguales. La referencia de una futura API externa se definirá aparte.
 
@@ -26,6 +26,7 @@ npm run typecheck
 npm run build
 npm run test:auth
 npm run test:inventory
+npm run test:crm
 ```
 
 La interfaz usa CSS nativo de Next.js. Después de actualizar desde la primera entrega, reiniciar una vez el servidor de desarrollo para que tome el cambio de `next.config.ts`.
@@ -34,10 +35,11 @@ Con el servidor local iniciado, se puede ejecutar la revisión de filas, fichas 
 
 ```text
 npm run check:ui -- http://127.0.0.1:3000
+npm run check:ui -- http://127.0.0.1:3000 --crm
 npm run check:ui -- http://127.0.0.1:3000 --inventory
 ```
 
-Usar la URL y el puerto del servidor. El recorrido completo necesita las cuentas de `frontend/.env.demo.local`; `--public-only` comprueba login y rutas cerradas sin cuentas reales. `CHROME_BIN` permite indicar el ejecutable si no se detecta automáticamente. Para comprobar también las actualizaciones de CSS en desarrollo, agregar `--hmr`: esta opción agrega y restaura una regla temporal en `globals.css`, por lo que no se debe editar ese archivo mientras corre. Sin esa opción también se puede verificar `npm run start` después del build. Capturas y reporte quedan en `.next/ui-qa/`, ignorados por Git.
+Usar la URL y el puerto del servidor. El recorrido predeterminado (`--crm`) revisa bandejas, fichas existentes y validación de motivo obligatorio con la cuenta administradora de `frontend/.env.demo.local`, sin guardar cambios; `--inventory` revisa catálogo y formularios sin guardar. `--public-only` comprueba login y rutas cerradas sin cuentas reales. `CHROME_BIN` permite indicar el ejecutable si no se detecta automáticamente. Admite desarrollo o `npm run start` después del build. Capturas y reporte quedan en `.next/ui-qa/`, ignorados por Git.
 
 - [Pantallas, rutas y recorrido](../docs/frontend.md)
 - [Modelo de datos propuesto](../docs/modelo-de-datos.md)

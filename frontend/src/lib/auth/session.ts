@@ -9,14 +9,14 @@ import type { CurrentAccount, Profile } from "./types";
 export const requireAccount = cache(async (): Promise<CurrentAccount> => {
   if (!supabaseConfig()) redirect("/login");
   const client = await createSessionClient();
-  const { data: { user }, error } = await client.auth.getUser();
-  if (error || !user) redirect("/login");
+  const { data, error } = await client.auth.getClaims();
+  if (error || !data?.claims.sub) redirect("/login");
   const result = await client.from("profiles")
-    .select("id,full_name,role,contact_phone,contact_email,is_enabled,accepts_assignments").eq("id", user.id).maybeSingle();
+    .select("id,full_name,role,contact_phone,contact_email,is_enabled,accepts_assignments").eq("id", data.claims.sub).maybeSingle();
   if (result.error) redirect("/acceso-denegado");
   const profile = result.data as Profile | null;
   if (!profile?.is_enabled || !["admin", "seller"].includes(profile.role)) redirect("/acceso-denegado");
-  return { ...profile, email: user.email ?? "" };
+  return { ...profile, email: typeof data.claims.email === "string" ? data.claims.email : "" };
 });
 
 export async function requireAdmin() {

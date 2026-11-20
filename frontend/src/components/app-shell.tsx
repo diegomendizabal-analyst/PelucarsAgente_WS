@@ -6,6 +6,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { ArrowUpRight, CarFront, ChevronRight, Inbox, LayoutGrid, LogOut, ShieldCheck, Users, UserRoundCog } from "lucide-react";
 import { logout } from "@/app/auth/actions";
 import type { CurrentAccount } from "@/lib/auth/types";
+import { AssignmentNotifications } from "./assignment-notifications";
 
 type PreviewRole = "vendedor" | "admin";
 const PreviewContext = createContext<PreviewRole>("vendedor");
@@ -36,10 +37,9 @@ export function AppShell({ children, account }: { children: ReactNode; account: 
         <div className="sidebar-bottom"><div className="sidebar-note"><span className="eyebrow">CADA CONSULTA CUENTA</span><p>Un lugar para acompañar<br />cada oportunidad.</p><ArrowUpRight size={20} /></div><div className="internal-label"><ShieldCheck size={16} /> Uso interno · Pelucars</div></div>
       </aside>
       <div className="main-frame">
-        <header className="topbar"><div className="breadcrumb">Comercial <ChevronRight size={14} /><span>{section}</span></div><div className="account-menu"><div><strong>{account.full_name}</strong><span>{role === "admin" ? "Administrador" : "Vendedor"}</span></div><form action={logout}><button className="button secondary logout-button" title="Cerrar sesión"><LogOut size={15} /><span>Salir</span></button></form></div></header>
-        {!userManagement && !realInventory && <div className="preview-banner"><span className="status-dot" /><span>Datos comerciales ficticios <span className="banner-detail">· Muestra visual compartida. No representa tu cartera real.</span></span><span className="preview-tag">DEMO</span></div>}
+        <header className="topbar"><div className="breadcrumb">Comercial <ChevronRight size={14} /><span>{section}</span></div><div className="account-menu"><AssignmentNotifications/><div><strong>{account.full_name}</strong><span>{role === "admin" ? "Administrador" : "Vendedor"}</span></div><form action={logout}><button className="button secondary logout-button" title="Cerrar sesión"><LogOut size={15} /><span>Salir</span></button></form></div></header>
         <main id="contenido" className="page-content" tabIndex={-1}>{children}</main>
-        <footer className="page-footer"><span>Pelucars / Gestión comercial</span><span>Acceso autenticado · {userManagement ? "Administración de cuentas" : realInventory ? "Catálogo e inventario" : "Datos comerciales de demostración"}</span></footer>
+        <footer className="page-footer"><span>Pelucars / Gestión comercial</span><span>Acceso autenticado · {userManagement ? "Administración de cuentas" : realInventory ? "Catálogo e inventario" : "Clientes y oportunidades"}</span></footer>
       </div>
     </div>
   </PreviewContext.Provider>;

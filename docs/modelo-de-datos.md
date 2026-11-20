@@ -2,11 +2,11 @@
 
 Fuente: [modelo recibido](referencias/modelo-backend-v1-2026-11-19.md), reconciliado con las conclusiones del [alcance V2](referencias/alcance-v2-2026-11-19.md). Los originales se conservan sin editar. El [diseño del 17/11](historico/modelo-de-datos-2026-11-17.md) es histórico y ya no define esta etapa.
 
-Implementación del 19/11/2026: identidad (`profiles`, `user_admin_events`) y catálogo/inventario (`vehicles`, `inventory_units`, `inventory_events`) aplicados en Supabase. Login, gestión de vendedores y administración de inventario conectados al frontend. Las migraciones y sus pruebas están en `supabase/`; ver [autenticacion.md](autenticacion.md) y [frontend.md](frontend.md). Clientes, oportunidades, conversaciones, ventas y seguimiento siguen siendo diseño y muestra visual, no tablas creadas.
+Implementación al 20/11/2026: identidad (`profiles`, `user_admin_events`), catálogo/inventario (`vehicles`, `inventory_units`, `inventory_events`) y primera etapa comercial (`customers`, `leads`, `lead_interests`, `lead_assignments`, `lead_status_history`) aplicados en Supabase. Login, usuarios, inventario, clientes y bandejas reales conectados al frontend. Las migraciones y pruebas están en `supabase/`; ver [autenticacion.md](autenticacion.md), [frontend.md](frontend.md) y [crm.md](crm.md). Conversaciones, score, actividades, ofertas y ventas siguen como diseño, sin tablas ni integración creadas.
 
 ---
 
-Actualizado el 19 de noviembre de 2026. Modelo para Supabase PostgreSQL, alineado con V1 de Pelucars. Incluye entidades, campos, permisos y operaciones necesarias para comenzar el backend. Sólo la etapa de identidad indicada arriba está aplicada; los módulos comerciales permanecen como propuesta.
+Actualizado el 20 de noviembre de 2026. Modelo para Supabase PostgreSQL, alineado con V1 de Pelucars. El documento incluye también campos de etapas futuras; las migraciones y el alcance de [crm.md](crm.md) identifican lo implementado. Los campos de atención/liberación, referencias a evaluaciones de score y automatizaciones de ingreso no se crean por anticipado en esta primera etapa comercial.
 
 La separación entre catálogo y unidades físicas es la principal decisión de diseño propuesta. El negocio necesita conservar qué se busca aunque no exista stock y qué unidad concreta se vende. Las reglas pendientes de disponibilidad, retorno al bot e integración externa se mantienen como decisiones, sin valores arbitrarios.
 
@@ -183,7 +183,8 @@ Registra altas/ediciones de fichas, altas/ediciones de unidades y baja/restaurac
 | id | uuid PK | Oportunidad. |
 | customer_id | uuid FK customers, requerido | Cliente. |
 | assigned_to | uuid FK profiles NULL | Responsable actual; NULL en pendientes. |
-| source | text | whatsapp_bot en el flujo de ingreso actual. |
+| source | text | whatsapp_bot para el futuro ingreso del bot; demo para la carga explícita de pruebas autorizada el 20/11. No habilita alta manual desde el panel. |
+| reference_number | integer UNIQUE, identity | Referencia humana OP-000123. UUID sigue como PK; la secuencia puede tener saltos. Implementado el 20/11. |
 | commercial_status | text, requerido | Uno de los cinco estados. |
 | attention_state | text, requerido | Estado operativo propuesto; regla de liberación pendiente. |
 | summary | text NULL | Resumen privado de la necesidad. |
@@ -332,11 +333,13 @@ Las filas las genera la operación validada, no se crean arbitrariamente desde e
 
 # Proyecciones de consulta y permisos
 
+Implementado el 20/11: `lead_notifications` contiene `id uuid PK`, `lead_id uuid FK leads`, `assignment_id uuid UNIQUE FK lead_assignments`, `recipient_id uuid FK profiles`, `created_at timestamptz` y `read_at timestamptz NULL`. Los eventos de asignación crean avisos internos; una toma voluntaria propia no los duplica. Sólo el destinatario habilitado que todavía sea responsable puede leerlos o marcarlos leídos. Al reasignar, los avisos previos se cierran. No incluye envío de correo/WhatsApp. Detalles de las funciones y del sondeo del frontend en [crm.md](crm.md).
+
 | Consulta o acción | Vendedor habilitado | Administrador |
 | --- | --- | --- |
 | Catálogo y stock | Lectura. | Lectura y ABM. |
-| Bandeja pendiente | Proyección mínima sin score, resumen, evidencias, intereses detallados ni mensajes. | Detalle completo. |
-| Tomar pendiente | Operación atómica; capacidad y orden pendientes de reglas. | Según operación aprobada. |
+| Bandeja pendiente | Sólo identificador de consulta, fecha/hora de ingreso y tiempo de espera, e indicación **Sin asignar**; acción **Tomar oportunidad**. Sin nombre ni detalle comercial. | Detalle completo. |
+| Tomar pendiente | Operación atómica, sin tope provisional aprobado para la demo. | Puede tomar o asignar manualmente. |
 | Oportunidad asignada a sí mismo | Detalle, actividades, ofertas y cambios permitidos. | Todas. |
 | Oportunidad de otro vendedor | Sin acceso. | Acceso. |
 | Lista de oportunidades dentro del vehículo | Solo las propias. No enlazar pendientes con modelo antes de tomar si revela información restringida. | Todas, incluidos pendientes. |
@@ -349,7 +352,8 @@ Implementación propuesta:
 
 - RLS sobre tablas privadas y consultas con autorización en servidor. Las tablas base de leads no dan lectura completa de pendientes al vendedor.
 - Una función list_pending_leads devuelve una lista explícita de columnas mínimas. Si usa SECURITY DEFINER, verificar usuario, habilitación y rol, fijar search_path y limitar EXECUTE. No usar SELECT \* ni devolver datos privados para ocultarlos después con CSS.
-- La selección pública exacta de campos queda en D05. Propuesta: ID, fecha de espera y estado, sin los datos que permitan estimar score.
+- D05 aprobado e implementado el 20/11: devolver únicamente identificador de consulta, fecha/hora de ingreso a la bandeja (para mostrar también el tiempo de espera) e indicación operativa **Sin asignar**. No devolver nombre, contacto, interés, stock relacionado, presupuesto, urgencia, score, mensajes, resumen ni historial de compras. No exponer el estado comercial: **En espera de stock**, por ejemplo, revela información excluida. La acción **Tomar oportunidad** habilita el detalle únicamente después de confirmar la asignación atómica al vendedor.
+- Búsquedas, filtros, ordenamientos y eventos de la bandeja deben respetar esa misma proyección, sin permitir deducir información comercial oculta.
 - Vistas normales con seguridad del invocador y RLS; no crear una vista con privilegios del dueño que filtre solo en la interfaz.
 - El detalle por vehículo/clientes y sus conteos debe aplicar el mismo permiso de las oportunidades. No filtrar solo el enlace y dejar visibles los datos.
 - Notificaciones en tiempo real para pendientes sin payload privado; volver a consultar la proyección segura. No publicar mensajes o scores completos en un canal compartido.
@@ -449,8 +453,7 @@ Estas son verificaciones a implementar sobre las migraciones y operaciones. El d
 
 - Aprobar definitivamente la granularidad del catálogo propuesta. En espera de stock ya está confirmado.
 - D01/D02/D03: liberación, capacidad y control de disponibilidad.
-- D04/D06: elegir al responsable anterior cuando hubo varios; el nuevo responsable ve el detalle existente y el anterior pierde acceso. El recurrente con responsable deshabilitado vuelve a bandeja.
-- D05: campos exactos de la bandeja pública.
+- D04/D06 resueltos: se elige al responsable actual de la consulta más reciente (ingreso y UUID de desempate). Si está deshabilitado o la más reciente no tiene responsable, vuelve a bandeja. El nuevo responsable ve el detalle existente y el anterior pierde acceso. Sigue pendiente D07, que decide cuándo crear la nueva consulta.
 - D07: condición temporal de siete días y excepciones, sin confundir mensaje con búsqueda.
 - D08/D09: reglas de calificación y orden de recepción/asignación. Confirmado: el vendedor obtiene el teléfono del panel y contacta al cliente. Falta reconciliar la asignación de pendientes al liberarse un vendedor con la conclusión D09 que indica toma voluntaria cuando no hay libres.
 - D10: las actividades programadas están aprobadas; definir edición y cancelación sin implementar recordatorios.

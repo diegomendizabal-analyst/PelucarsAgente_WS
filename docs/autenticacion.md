@@ -5,7 +5,7 @@
 ## Flujo implementado
 
 - `/login`: correo y contraseña mediante Supabase Auth. No hay registro público en la aplicación.
-- Sesión SSR con `@supabase/ssr`, cookies HttpOnly, SameSite=Lax y Secure en producción; sin tokens en localStorage. El proxy renueva cookies y marca respuestas privadas/no-store. El servidor valida la identidad con `getUser()` y consulta el perfil actual en cada render/acción; no autoriza con `user_metadata` ni con datos de un selector.
+- Sesión SSR con `@supabase/ssr`, cookies HttpOnly, SameSite=Lax y Secure en producción; sin tokens en localStorage. El proxy renueva cookies y marca respuestas privadas/no-store. Desde la optimización del 20/11 el servidor verifica firma/vigencia con `getClaims()` y consulta el perfil actual en cada render/acción/ruta; no autoriza con `user_metadata` ni con claims de rol. El perfil se deduplica sólo dentro del render. El proxy conserva el rechazo previo al streaming para rutas exclusivas de admin; en las demás se evita una segunda consulta de perfil. No hay caché compartida de cuentas o permisos. Se comprobó el rechazo de un JWT válido de un perfil deshabilitado sin cambiar esa cuenta.
 - Un perfil inexistente o deshabilitado queda fuera del CRM. Las reglas RLS también comprueban la habilitación vigente, incluso con un JWT anterior.
 - `/usuarios`: sólo administradores. Lista nombre, correo de Auth, rol, teléfono/correo de contacto y habilitación. Permite crear vendedores y editar nombre/contacto/habilitación; el correo de acceso y el rol no se editan en esta primera pantalla. Nombre, teléfono y correo de contacto son obligatorios desde la demo; asteriscos rojos y errores por campo, verificados también en servidor.
 - El alta crea primero Auth desde el servidor, luego perfil y auditoría en una transacción SQL autenticada. Si falla entre ambos pasos, la cuenta sin perfil no tiene acceso; revisar y conciliar sin borrar automáticamente una identidad cuyo resultado pueda ser incierto.
@@ -13,7 +13,7 @@
 - Deshabilitar conserva historial y no reasigna oportunidades. Se pone disponibilidad en false. La política operativa de disponibilidad todavía no está implementada.
 - Salir revoca la sesión actual y limpia sus cookies. Recuperación por correo, cambio de contraseña autoservicio y cambio de correo quedan para el siguiente incremento; las cuentas de esta demo usan direcciones `.example`, sin bandeja real ni envío de emails.
 
-Oportunidades y clientes todavía usan datos ficticios locales y lo indican en su banner. No representan una cartera real ni implementan aún la visibilidad comercial de V2. El selector Admin/Vendedor se retiró; la presentación usa el rol real. El incremento posterior al PR #3 conecta vehículos e inventario a Supabase; su estado y pruebas se describen en [frontend.md](frontend.md).
+La presentación usa el rol real. Los incrementos posteriores conectan vehículos/inventario y clientes/oportunidades a Supabase. La bandeja compartida del vendedor sólo recibe tres campos operativos; las oportunidades, relaciones y contadores se restringen al responsable actual o administrador. Ver [frontend.md](frontend.md) y [crm.md](crm.md) para el estado y las pruebas de cada módulo.
 
 ## Configuración local
 
