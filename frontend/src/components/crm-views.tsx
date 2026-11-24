@@ -7,6 +7,7 @@ import { crmPageSize } from "@/lib/crm/data";
 export function CrmError() { return <div role="alert" className="form-feedback error">No pudimos consultar estos datos. Usá Actualizar para volver a intentarlo.</div>; }
 export function CrmPagination({page,count,href}:{page:number;count:number;href:(page:number)=>string}) {
   const pages=Math.max(1,Math.ceil(count/crmPageSize));
+  if (pages === 1 && page === 1) return null;
   return <div className="panel-footer crm-pagination"><span>{count} {count===1 ? "registro" : "registros"} · Página {page} de {pages}</span><div>{page>1 && <Link className="button secondary" href={href(page-1)}>Anterior</Link>}{page<pages && <Link className="button secondary" href={href(page+1)}>Siguiente</Link>}</div></div>;
 }
 export function PendingRows({rows}:{rows:PendingLead[]}) {

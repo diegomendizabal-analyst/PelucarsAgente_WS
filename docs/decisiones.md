@@ -1,5 +1,5 @@
 # Decisiones vigentes — Pelucars
-Actualizado el 20/11/2026. Fuentes: [alcance V2](referencias/alcance-v2-2026-11-19.md) y [modelo backend V1](referencias/modelo-backend-v1-2026-11-19.md), conservados tal como se recibieron. Las conclusiones de la tabla del alcance actualizan los párrafos anteriores cuando hay diferencias. Las contradicciones restantes se explicitan, sin convertirlas en reglas de código.
+Actualizado el 24/11/2026. Fuentes vigentes: [alcance V3](referencias/alcance-v3-2026-11-24.md) y [modelo backend V2](referencias/modelo-backend-v2-2026-11-24.md), conservados tal como se recibieron. Las decisiones confirmadas en esta sesión prevalecen sobre sus propuestas. El estado de implementación de Reportes está en [reportes.md](reportes.md).
 
 El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus identificadores D01–D19 no equivalen a los del alcance V2. El [modelo vigente](modelo-de-datos.md) sustituye el diseño inicial.
 
@@ -17,28 +17,31 @@ El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus id
 - Avisos internos de asignación implementados el 20/11: campana para el destinatario actual, revisión cada 45 segundos con pestaña visible y al recuperar foco, marcado como leído al abrir. Incluye recurrencia y reasignación; la toma propia no genera aviso redundante. No envía correo ni WhatsApp.
 - Asignación manual y reasignación administrativa incluidas (D11). El responsable nuevo obtiene el detalle existente; el anterior pierde acceso (D06).
 - El vendedor toma el teléfono del panel y contacta desde su teléfono particular (D09). No se promete traslado técnico ni captura del chat privado.
-- Actividades realizadas y programadas incluidas (D10); programar no cuenta como intento realizado. Sin recordatorios automáticos.
+- Actividades manuales, llamadas, reuniones, notas de seguimiento, agenda y contadores de recontacto pasan a una versión posterior (24/11, sustituye D10). Se conserva el historial automático de estados y asignaciones.
+- Reportes exclusivo de admin, como inicio del admin; Oportunidades como inicio del vendedor. Ventas y score siguen incluidos en el producto, sin implementar sus módulos en este incremento.
+- D18 parcialmente cerrado el 24/11: consultas al primer asignado, asignaciones al receptor y cartera al responsable actual. Período inicial de 30 días inclusivos. Datos reales por defecto en entrega; durante la demo rige la decisión posterior de muestras inicialmente visibles. Fórmulas en reportes.md. Bandas de score, venta/corrección y pérdidas individuales no se dan por resueltas.
+- Ampliación del 24/11: filtros automáticos, sliders precio/año con ingreso exacto e interruptor global temporal muestras/vacío, inicialmente encendido. Herramienta del equipo; el cliente no conservará muestras ni selector. Retirar datos demo por completo al cerrar la demo, con purga revisada pendiente. Sin mezcla con reales. Ver [demo-temporal.md](demo-temporal.md).
+- Autorización posterior expresa «Sí, actualizar y cargar la demo»: aplicadas tres migraciones de Reportes/rangos/origen y carga adicional sin resetear seed ni alterar registros/cuentas existentes. Sustituye la prohibición inicial de despliegue SQL sólo para este incremento.
+- Pendientes adicionales autorizados el 24/11: enlaces Volver reconocibles, interés sin recuadro anidado, paginado innecesario oculto, rótulo Resumen de la consulta y oportunidades por vehículo con acceso por responsable/admin.
 - Cinco estados: Nueva consulta, En seguimiento, Vendido, Perdido y En espera de stock. Este último nombre ya está definido (D14).
 - Ventas registradas explícitamente por responsable/admin, con actualización transaccional de la unidad vendida. El administrador gestiona inventario (D17).
 - El catálogo reside en Supabase y se administra desde el panel; bot sin catálogo, precios ni stock en V1.
 - Separación confirmada el 19/11: ficha por marca/modelo; versión, año, precio y características en cada unidad física. El stock disponible se calcula por unidades, no se edita como cantidad. Datos desconocidos opcionales.
 - Revisión del 20/11: el código interno de unidad se genera en la base (`PEL-<número>`) y no se ingresa ni se modifica en los formularios. Los códigos existentes se conservan. La secuencia puede tener saltos; no representa cantidad de stock. La referencia del sistema externo será independiente y sigue pendiente de definición.
 - Búsqueda del 20/11: marca/modelo al escribir con pausa de 300 ms; stock, catálogo, año y transmisión al cambiar. Año/transmisión y, cuando se pide, disponibilidad deben coincidir en la misma unidad. No se cruzan características de autos diferentes. La búsqueda se realiza en la base antes de paginar.
-- Rango de precios del 20/11: mínimo y máximo inclusivos y opcionales; se exige ARS o USD si se usa un límite. Se compara el precio publicado en su moneda original, en la misma unidad que cumple año, transmisión y stock. No convierte importes; precios desconocidos quedan fuera de un filtro por precio/moneda. Los rangos inválidos muestran una indicación y no se interpretan como una búsqueda sin límites.
+- Rango de precios: mínimo/máximo inclusivos y opcionales, se exige ARS o USD para límites. El 24/11 el usuario amplió la búsqueda a **presupuesto en ambas monedas** y confirmó usar siempre **Venta oficial por ahora**. ARS incluye precios ARS y equivalentes USD; USD incluye precios USD y equivalentes ARS. Mismo filtro de año/transmisión/stock por unidad, antes de paginar. Precio original intacto, equivalente y tasa visibles; sin cotización se informa fallo, sin resultados parciales silenciosos. Sustituye el filtro del 20/11 limitado a moneda original. Desconocidos no cuentan como cero. Ver [inventario-presupuesto.md](inventario-presupuesto.md).
 - Primera implementación de inventario: admin crea/edita y da de baja/restaura fichas sin unidades disponibles; retira o vuelve a disponer unidades. Vendedor consulta. Marcar vendido requiere el futuro módulo comercial y no está habilitado en inventario.
 - Se conserva el interés original aunque la venta sea de una alternativa. La llegada de stock no reabre ni contacta automáticamente.
-- Fotografías, dashboards y chat privado del vendedor fuera de V1.
+- Fotografías y chat privado del vendedor fuera del alcance actual. Reportes administrativo entra ahora; sustituye la exclusión anterior de dashboards.
 
 ## Primera implementación autorizada
 
-### Propuesta pendiente: widget de cotización USD/ARS
+### Widget USD/ARS implementado; referencia provisional
 
-El usuario propone un widget compacto, siempre visible en el centro de la barra superior, con valor obtenido de una API y botón **Actualizar**. El tipo de dólar se conversará con el cliente; no está definido ni implementado todavía.
+El usuario eligió **DolarAPI oficial, compra y venta**, provisional y sujeto a conversación con cliente. Implementado como control compacto en la barra superior, con nombre, fecha y actualización automática cada 5 minutos con pestaña visible. Servidor autenticado, caché de 5 minutos y timeout de 6 segundos; sin valores ficticios ante fallo. Conserva último valor/fecha con aviso si falla. Configurable mediante `DOLAR_API_CASA` (oficial/blue). Ver [demo-temporal.md](demo-temporal.md).
 
-- Resolver con el cliente fuente/proveedor, tipo de dólar (oficial, MEP, blue o cotización propia), compra/venta y uso comercial de la referencia. Definir si el futuro conversor será sólo una calculadora o también permitirá comparar unidades de monedas diferentes.
-- Propuesta visual: tipo de cotización, valor en ARS por USD, fecha/hora de la fuente y botón Actualizar; en móvil, un indicador compacto que despliegue el detalle. El conversor podría abrirse desde el mismo widget.
-- Propuesta técnica: consultar desde servidor y compartir un valor cacheado, con intervalo de vigencia y límite de actualizaciones por definir. Ante fallo, conservar la última cotización con fecha y aviso de desactualización, o mostrar Sin cotización si nunca hubo una. Nunca reemplazarla por un valor aproximado silencioso.
-- Candidato a evaluar: [DolarAPI, endpoint de dólares](https://dolarapi.com/docs/argentina/operations/get-dolares), cuya documentación expone compra, venta, casa y fechaActualizacion. Es un agregador; confirmar fuente, disponibilidad, límites y condiciones antes de elegirlo. No se conectó al proyecto.
+- Confirmar con cliente referencia definitiva y uso comercial. Actualización manual implementada: vuelve a consultar al proveedor. El usuario confirmó «Sí, calculadora informativa» el 24/11: implementada ARS ↔ USD dentro del widget, eligiendo explícitamente Compra/Venta y mostrando tasa usada, sin cambiar precios ni totales. Fórmulas y pruebas en demo-temporal.md.
+- Fuente conectada: [DolarAPI, endpoint de dólares](https://dolarapi.com/docs/argentina/operations/get-dolares), campos compra, venta, casa y fechaActualizacion.
 - Mantener importe y moneda originales del vehículo. Una equivalencia informativa debe indicar la cotización usada y no sobrescribir precios. Si se habilita ajuste manual, definir permisos administrativos y auditoría. Las ventas futuras necesitan conservar su tipo de cambio acordado, no recalcularse con el valor del día.
 
 ### Alcance conectado
@@ -64,13 +67,16 @@ El alta de Auth y la inserción de perfil no son una sola transacción. Un fallo
 | D15 | Devolver oportunidades tras conocer score | Reasignación administrativa como mecanismo confirmado; no agregar devolución automática. |
 | D16 | Granularidad y normalización de catálogo | Confirmada ficha marca/modelo y unidades con versión/año. Implementada deduplicación por mayúsculas y espacios. Consolidación automática de nombres ambiguos e importación siguen pendientes. |
 | D17 | Anulación/corrección de una venta | Administrar stock está confirmado; faltan trazabilidad, permisos y reversión de venta. No liberar stock por cambiar una etiqueta. |
+| D18 | KPI restantes | Atribución operativa y valores iniciales confirmados arriba; ventas/score y pérdidas individuales siguen pendientes de sus fuentes y reglas. |
+| D19 | Reapertura de cerradas | No admitida por las operaciones actuales; acordar operación y motivo antes de habilitarla. |
+| D20 | Avisos por ingreso de stock | Definir compatibilidad, desconocidos, destinatarios admin, reingresos y separación demo/real. No implementados en Reportes. |
 
 ## Decisiones técnicas pendientes
 
-Plan para retomar la semana del 23/11 y contexto para otro chat: [continuidad.md](continuidad.md). Próximo incremento propuesto: actividades y recontactos; no implementado en esta entrega.
+Plan actualizado: [continuidad.md](continuidad.md). Reportes conectado y SQL aplicado con autorización posterior. Actividades y recontactos quedan para otra versión.
 
-- Próxima versión visual, diferida por el usuario el 20/11: compactación general de fichas, gestión antes del historial en móvil, jerarquía de eventos, unificación visual de estados, nombres de cliente en avisos y pulido de cargas/transiciones. En esta entrega sólo se ajusta la distinción del bloque **Interés del cliente**, con búsqueda destacada y etiqueta de interés separada.
-- Navegación de regreso, pendiente para esa revisión visual (observación del usuario, 20/11): los enlaces **Volver a vehículos / clientes / oportunidades** parecen texto informativo y no se reconoce claramente que son clickeables. Revisar el componente compartido `BackLink`: tratamiento visible de enlace o botón secundario desde el estado inicial, contraste, área de interacción y estados de hover/foco; comprobar escritorio y móvil sin depender del hover para reconocer la acción. Mantener el destino y los filtros de regreso existentes. Registrado para una próxima versión, sin cambio visual en esta entrega.
+- Próxima versión visual: compactación general de fichas, gestión antes del historial en móvil, jerarquía de eventos, unificación visual de estados, nombres de cliente en avisos y pulido de cargas/transiciones. El 24/11 se autorizaron y resolvieron específicamente BackLink, interés sin tarjeta anidada, paginado de una página y rótulo Resumen de la consulta; lo demás continúa pendiente.
+- Navegación de regreso, resuelta localmente el 24/11: `BackLink` usa borde, fondo y área de interacción de 42 px, sin depender de hover. Conserva destinos/filtros del catálogo y actualiza regreso a la nueva ruta de Oportunidades.
 
 - Completar los contactos de vendedores anteriores y validar `seller_contact_required` en una migración posterior. La restricción ya exige datos en nuevas escrituras; `NOT VALID` se refiere solamente a filas históricas.
 - El último chequeo de advisors informó `auth_leaked_password_protection`: revisar la protección de contraseñas filtradas en Supabase antes de producción. No se modificó configuración de Auth en este incremento.

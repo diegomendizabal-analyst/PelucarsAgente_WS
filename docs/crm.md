@@ -1,5 +1,7 @@
 # Clientes y oportunidades — primera etapa conectada
 
+Actualización 24/11: Reportes es el inicio del admin y la bandeja se trasladó a `/oportunidades`. La ficha de vehículo lista oportunidades con intereses activos, propias para vendedor y todas para admin, con RLS antes de contar/paginar. Resumen de la consulta reemplaza el rótulo Nota. Actividades, agenda y contadores de recontacto son posteriores; se conserva el historial automático. Compras y score mantienen su integración pendiente. Estado y validaciones actuales en [reportes.md](reportes.md); los apartados siguientes describen la entrega CRM anterior.
+
 Rama `backend-clientes-oportunidades`, iniciada desde `main` tras el merge del PR #4. Migración `20261120141656_customers_and_opportunities.sql`, aplicada en Supabase el 20/11/2026. El ingreso de consultas sigue pendiente. Posteriormente se autorizó una carga explícita de [datos de prueba persistentes](pruebas-crm.md), separada de las migraciones y del alta manual desde la interfaz.
 
 ## Alcance implementado
@@ -32,7 +34,7 @@ Las implementaciones privilegiadas se encuentran en `private`, con `search_path`
 
 ## Recorrido visual
 
-- `/`: **En espera**, **Mis oportunidades** y, para admin, **Todas las oportunidades**. El vendedor recibe la proyección mínima; el admin puede abrir el detalle de pendientes y asignar un responsable. Los listados se paginan de a 20.
+- `/oportunidades`: **En espera**, **Mis oportunidades** y, para admin, **Todas las oportunidades**. El vendedor recibe la proyección mínima; el admin puede abrir el detalle de pendientes y asignar un responsable. Los listados se paginan de a 20.
 - `/oportunidades/[id]`: datos de cliente/necesidad, interés, gestión, historial cronológico de estados/asignaciones. Conversación, score y actividades muestran su estado pendiente de integración, sin inventar valores.
 - `/clientes`: búsqueda por nombre o teléfono dentro del alcance autorizado.
 - `/clientes/[id]`: consultas accesibles del mismo cliente. Recontactos/compras quedan señalados como siguientes etapas, no como contadores en cero.

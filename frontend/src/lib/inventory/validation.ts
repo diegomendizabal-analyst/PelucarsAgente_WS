@@ -17,7 +17,7 @@ export const unitSchema = z.object({
   if (value.listed_price !== null && value.currency === null) ctx.addIssue({ code: "custom", path: ["currency"], message: "Elegí la moneda del precio." });
   if (value.listed_price === null && value.currency !== null) ctx.addIssue({ code: "custom", path: ["listed_price"], message: "Completá el precio o dejá también la moneda vacía." });
 });
-export const editIdentity = z.object({ id: z.uuid(), updated_at: z.iso.datetime({ offset: true }) });
+export const editIdentity = z.object({ id: z.guid(), updated_at: z.iso.datetime({ offset: true }) });
 export function inventoryFieldErrors(error: z.ZodError): Record<string, string> {
   const result: Record<string, string> = {};
   for (const issue of error.issues) result[String(issue.path[0])] ??= issue.message;

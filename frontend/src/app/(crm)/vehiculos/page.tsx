@@ -11,7 +11,7 @@ async function Catalog({ searchParams }: { searchParams: Search }) {
   const filters = parseInventoryFilters(params);
   const page = pageNumber(params.page);
   const [data, options] = await Promise.all([listVehicles(filters, page), inventoryYears()]);
-  if (data.error || options.error) return <InventoryError />;
+  if (options.error) return <InventoryError />;
   return <VehicleCatalog {...data} page={page} filters={filters} years={options.years} admin={account.role === "admin"} />;
 }
 export default function Page({ searchParams }: { searchParams: Search }) { return <Suspense fallback={<Loading />}><Catalog searchParams={searchParams} /></Suspense>; }

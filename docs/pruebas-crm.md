@@ -2,6 +2,8 @@
 
 El 20/11/2026 el usuario autorizó cargar ejemplos en Supabase para probar sin depender del bot. Esto **no habilita el alta manual de clientes u oportunidades desde el panel**, que sigue pendiente de revisar con el alcance.
 
+**Actualización 24/11:** se agregó una carga aditiva de Reportes en `supabase/demo/reports.sql`, sin reiniciar ni sobrescribir la muestra inicial. El interruptor temporal alterna muestras/vacío, controlado por servidor. Ver [demo-temporal.md](demo-temporal.md). No usar el reset descrito más abajo para este incremento; se conserva como procedimiento histórico y no incluye la nueva carga.
+
 La migración `20261120150439_crm_demo_source.sql` permite `leads.source = 'demo'` además de `whatsapp_bot`. La carga vive separada en `supabase/demo/crm.sql`; no forma parte de las migraciones ni se ejecuta al iniciar la aplicación.
 
 ## Muestra inicial

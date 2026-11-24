@@ -6,6 +6,7 @@ export type InventoryUnit = {
   id: string; vehicle_id: string; internal_code: string; model_year: number | null;
   version: string | null; transmission: string | null; mileage_km: number | null;
   listed_price: number | null; currency: "ARS" | "USD" | null;
+  equivalent_price?: number | null;
   status: "available" | "withdrawn" | "sold"; received_at: string | null; updated_at: string;
 };
 export type InventoryFormState = { error?: string; success?: string; id?: string; fieldErrors?: Record<string, string> };

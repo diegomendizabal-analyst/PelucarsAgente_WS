@@ -1,8 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { vehicleSchema, unitSchema } from '../src/lib/inventory/validation.ts';
-import { emptyInventoryFilters, parseInventoryFilters, inventorySearchParams, priceFilterError } from '../src/lib/inventory/filters.ts';
+import { emptyInventoryFilters, parseInventoryFilters, inventorySearchParams, priceFilterError, yearFilterError } from '../src/lib/inventory/filters.ts';
 const valid = { model_year: '', version: '', transmission: '', mileage_km: '', listed_price: '', currency: '', status: 'available', received_at: '' };
+test('rangos de años, extremos abiertos y enlaces anteriores',()=>{
+  const range=parseInventoryFilters({year_min:'2016',year_max:'2024'});
+  assert.equal(yearFilterError(range),null);
+  assert.deepEqual(parseInventoryFilters(Object.fromEntries(inventorySearchParams(range))),range);
+  assert.equal(parseInventoryFilters({year:'2022'}).minYear,'2022');
+  assert.equal(parseInventoryFilters({year:'2022'}).maxYear,'2022');
+  assert.ok(yearFilterError({...range,minYear:'2025'}));
+  assert.ok(yearFilterError({...range,minYear:'20'}));
+  assert.equal(yearFilterError({...range,maxYear:''}),null);
+});
 test('catalogo exige marca y modelo identificados', () => {
   assert.equal(vehicleSchema.safeParse({ brand: '  ', model: 'Modelo' }).success, false);
   assert.deepEqual(vehicleSchema.parse({ brand: ' Marca ', model: ' Modelo ' }), { brand: 'Marca', model: 'Modelo' });
