@@ -10,8 +10,11 @@ El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus id
 - Demo inicial: un administrador y un vendedor, con correos de prueba aprobados. Los vendedores se crean desde el sistema; no hay registro público.
 - Contacto del vendedor: teléfono internacional y correo de contacto obligatorios desde ahora en alta y edición, incluida la demo (confirmado el 19/11). Correo de contacto separado del de acceso, personal o laboral, sin exigencia de casilla corporativa. Las cuentas anteriores conservan sus datos; deben completarse al editar. No cambiar sus accesos ni rellenar valores ficticios.
 - Administradores ven todo. Vendedores acceden al detalle sólo de sus oportunidades actuales; el permiso se aplica a mensajes, score, evidencia, relaciones y contadores.
-- Pendientes: score, mensajes, resumen e información que revele intención permanecen ocultos. La lista exacta de campos mínimos sigue pendiente.
-- Nueva consulta recurrente con responsable anterior deshabilitado vuelve a la bandeja (D04).
+- D05 confirmado el 20/11: en la bandeja de espera, el vendedor ve únicamente identificador de consulta, fecha/hora de ingreso y tiempo de espera, e indicación operativa **Sin asignar**. Se ofrece la acción **Tomar oportunidad**. El nombre del cliente y el detalle se habilitan después de asignarse, sólo para su responsable y administradores.
+- La bandeja del vendedor no revela teléfono, vehículo/interés, stock relacionado, presupuesto, financiación, urgencia, score, conversación, evidencias, resumen ni historial de compras. Tampoco muestra estados comerciales como **En espera de stock**. La restricción alcanza respuestas de servidor, búsquedas, filtros, ordenamientos y eventos; no basta con ocultar columnas. Administradores mantienen el acceso completo. Implementada en la primera etapa de [clientes y oportunidades](crm.md).
+- Toma voluntaria: **sin tope provisional para la demo**, confirmado por el usuario el 20/11. No define el límite de producción ni modifica disponibilidad/asignación automática. La toma y el historial son atómicos; una oportunidad ya tomada no se puede volver a tomar.
+- Recurrencia (D04, confirmado el 20/11): usar al responsable actual de la consulta más reciente, ordenada por ingreso y UUID como desempate, incluso si está ocupado. Si está deshabilitado o la consulta más reciente no tiene responsable, volver a la bandeja; no buscar un responsable más antiguo. Implementado al insertar una nueva consulta sin asignación explícita. La ventana que decide cuándo crear esa nueva consulta sigue pendiente (D07).
+- Avisos internos de asignación implementados el 20/11: campana para el destinatario actual, revisión cada 45 segundos con pestaña visible y al recuperar foco, marcado como leído al abrir. Incluye recurrencia y reasignación; la toma propia no genera aviso redundante. No envía correo ni WhatsApp.
 - Asignación manual y reasignación administrativa incluidas (D11). El responsable nuevo obtiene el detalle existente; el anterior pierde acceso (D06).
 - El vendedor toma el teléfono del panel y contacta desde su teléfono particular (D09). No se promete traslado técnico ni captura del chat privado.
 - Actividades realizadas y programadas incluidas (D10); programar no cuenta como intento realizado. Sin recordatorios automáticos.
@@ -40,7 +43,7 @@ El usuario propone un widget compacto, siempre visible en el centro de la barra 
 
 ### Alcance conectado
 
-Login/logout, perfiles, habilitación, auditoría y alta/edición básica de vendedores. Migración de identidad y cuentas iniciales de demo. Después del merge del PR #3 se autorizó y conectó catálogo/inventario en `backend-vehiculos-inventario`. Clientes, oportunidades y seguimiento conservan su muestra local; el inventario empieza vacío, sin copiar vehículos ficticios.
+Login/logout, perfiles, habilitación, auditoría y alta/edición básica de vendedores. Después del merge del PR #3 se conectó catálogo/inventario. Tras el merge del PR #4 se autorizó y conectó la primera etapa de clientes/oportunidades en `backend-clientes-oportunidades`: bandejas reales, toma, asignación y estados con historial. El 20/11 se autorizó cargar [datos de prueba persistentes](pruebas-crm.md) para probar sin bot. El alta manual desde el panel sigue pendiente: el usuario pidió revisar su inclusión en el alcance antes de implementarla. Ingreso desde el bot, actividades y ventas permanecen pendientes; ver [crm.md](crm.md).
 
 El rol y la habilitación no dependen de metadata editable. El usuario sin perfil completo queda sin acceso. La gestión visible crea únicamente vendedores; las cuentas admin se incorporan mediante procedimiento controlado. La separación entre habilitación y disponibilidad está modelada, con disponibilidad inicialmente false y sin automatización.
 
@@ -51,10 +54,8 @@ El alta de Auth y la inserción de perfil no son una sola transacción. Un fallo
 | ID V2 | Decisión pendiente | Tratamiento actual |
 | --- | --- | --- |
 | D01 | Cuándo se libera un vendedor | No deducir disponibilidad del estado comercial. |
-| D02 | Capacidad de toma voluntaria | Sin límite inventado. |
+| D02 | Capacidad de toma voluntaria en producción | Demo sin tope provisional autorizado el 20/11; regla definitiva pendiente. |
 | D03 | Quién cambia disponibilidad | Separada de cuenta habilitada; sin control operativo implementado. |
-| D04 | Elegir responsable anterior con varios históricos | La excepción por deshabilitación ya está resuelta: bandeja. |
-| D05 | Campos de la bandeja compartida | Propuesta mínima ID/espera/estado; no implementar una proyección definitiva aún. |
 | D07 | Ventana de siete días | Faltan origen del cómputo, retornos anteriores y excepciones. |
 | D08 | Preguntas y score | Aprobar criterios, pesos y momento; no implementar motor. |
 | D09 | Cola al liberarse un vendedor | El cuerpo dice asignar el más antiguo al liberarse; la conclusión habla de toma voluntaria si no hubo libres. Confirmar si la segunda limita también el drenaje posterior. |
@@ -66,10 +67,15 @@ El alta de Auth y la inserción de perfil no son una sola transacción. Un fallo
 
 ## Decisiones técnicas pendientes
 
+Plan para retomar la semana del 23/11 y contexto para otro chat: [continuidad.md](continuidad.md). Próximo incremento propuesto: actividades y recontactos; no implementado en esta entrega.
+
+- Próxima versión visual, diferida por el usuario el 20/11: compactación general de fichas, gestión antes del historial en móvil, jerarquía de eventos, unificación visual de estados, nombres de cliente en avisos y pulido de cargas/transiciones. En esta entrega sólo se ajusta la distinción del bloque **Interés del cliente**, con búsqueda destacada y etiqueta de interés separada.
+- Navegación de regreso, pendiente para esa revisión visual (observación del usuario, 20/11): los enlaces **Volver a vehículos / clientes / oportunidades** parecen texto informativo y no se reconoce claramente que son clickeables. Revisar el componente compartido `BackLink`: tratamiento visible de enlace o botón secundario desde el estado inicial, contraste, área de interacción y estados de hover/foco; comprobar escritorio y móvil sin depender del hover para reconocer la acción. Mantener el destino y los filtros de regreso existentes. Registrado para una próxima versión, sin cambio visual en esta entrega.
+
 - Completar los contactos de vendedores anteriores y validar `seller_contact_required` en una migración posterior. La restricción ya exige datos en nuevas escrituras; `NOT VALID` se refiere solamente a filas históricas.
 - El último chequeo de advisors informó `auth_leaked_password_protection`: revisar la protección de contraseñas filtradas en Supabase antes de producción. No se modificó configuración de Auth en este incremento.
 
 - Migración de identidad aplicada y cuentas de demo creadas. Pendiente desactivar el registro público: el token devolvió HTTP 403 y el control aparece bloqueado para el usuario; debe revisarlo un Owner/Administrator de Supabase. Las cuentas sin perfil no acceden al CRM.
 - Cambiar correo de acceso, recuperación y cambio de contraseña: siguiente incremento del módulo de usuarios; no enviar emails a direcciones .example.
 - Antes de sustituir muestras por datos reales, aplicar RLS por responsable a todas las relaciones comerciales y retirar las dependencias de demo-data.
-- Manual de marca pendiente: colores actuales blanco/negro/grises/rojo, tipografías del sistema y marca tipográfica provisional. No se incorporó la foto del logo.
+- Manual de marca pendiente: colores actuales blanco/negro/grises/rojo y marca tipográfica provisional. Manrope aprobada por el usuario el 20/11 y aplicada globalmente como fuente variable local; etiquetas y ayudas más legibles. No se incorporó la foto del logo.

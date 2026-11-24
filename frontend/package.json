@@ -11,6 +11,9 @@
     "check:ui": "node scripts/check-ui.mjs",
     "test:auth": "node --test scripts/auth-validation.test.mjs",
     "test:inventory": "node --test scripts/inventory-validation.test.mjs",
+    "test:crm": "node --test scripts/crm-validation.test.mjs",
+    "demo:load": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ../scripts/supabase-admin.ps1 -Action LoadCrmDemo",
+    "demo:reset": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ../scripts/supabase-admin.ps1 -Action ResetCrmDemo",
     "check:auth": "node scripts/check-auth.mjs",
     "users:bootstrap": "node scripts/bootstrap-demo.mjs"
   },

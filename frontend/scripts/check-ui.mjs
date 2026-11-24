@@ -1,5 +1,5 @@
 // Regresión visual y de navegación contra un servidor local ya iniciado.
-// Uso: npm run check:ui -- http://127.0.0.1:3100 [--hmr]
+// Uso: npm run check:ui -- http://127.0.0.1:3100 [--crm | --inventory | --public-only]
 // Requiere Chrome/Chromium local; CHROME_BIN permite indicar su ejecutable.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -13,23 +13,23 @@ import { parseEnv } from 'node:util';
 
 const base = process.argv.find((arg) => /^https?:/.test(arg)) ?? 'http://127.0.0.1:3100';
 assert(['127.0.0.1', 'localhost'].includes(new URL(base).hostname), 'Usar un servidor local.');
-const hmr = process.argv.includes('--hmr');
 const publicOnly = process.argv.includes('--public-only');
 const inventoryOnly = process.argv.includes('--inventory');
+const timingOnly = process.argv.includes('--timing');
+const guardsOnly = process.argv.includes('--guards');
+const crmOnly = !publicOnly && !inventoryOnly;
 const smoke = process.argv.includes('--smoke');
 const root = fileURLToPath(new URL('../', import.meta.url));
 const credentialsPath = join(root, '.env.demo.local');
 const credentials = existsSync(credentialsPath) ? parseEnv(await readFile(credentialsPath, 'utf8')) : {};
-if (!publicOnly) assert(credentials.DEMO_ADMIN_PASSWORD && credentials.DEMO_SELLER_PASSWORD, 'Faltan cuentas reales de demo. Usar --public-only para revisar login y rutas cerradas.');
-const output = join(root, '.next', 'ui-qa', hmr ? 'dev' : 'build');
+if (!publicOnly) assert(credentials.DEMO_ADMIN_PASSWORD, 'Faltan cuentas reales de demo. Usar --public-only para revisar login y rutas cerradas.');
+const output = join(root, '.next', 'ui-qa', 'build');
 const executable = [process.env.CHROME_BIN, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/chromium', '/usr/bin/google-chrome'].find((path) => path && existsSync(path));
 assert(executable, 'No se encontró Chrome/Chromium. Definir CHROME_BIN.');
 await mkdir(output, { recursive: true });
 const profile = join(tmpdir(), `pelucars-ui-${process.pid}`);
 const browser = spawn(executable, ['--headless', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { windowsHide: true, stdio: 'ignore' });
 let socket;
-let originalCss;
-const cssPath = join(root, 'src', 'app', 'globals.css');
 const pending = new Map();
 const errors = [];
 let id = 0;
@@ -145,12 +145,14 @@ try {
   }
   await send('Runtime.enable');
   await send('Page.enable');
+  await send('Page.bringToFront');
+  await send('Emulation.setFocusEmulationEnabled',{enabled:true});
   for (const route of ['/', '/usuarios', '/clientes/demo-ana', '/vehiculos/demo-corolla/editar']) {
     await send('Page.navigate', { url: base + route });
     await until(`location.pathname === '/login' && !!document.querySelector('#login-email')`);
     assert.equal(await evaluate(`!!document.querySelector('.account-menu')`), false, 'Ruta privada sin sesión');
   }
-  for (const width of (smoke ? [1440, 390] : [1440, 768, 390, 320])) {
+  for (const width of (timingOnly ? [1440] : smoke ? [1440, 390] : [1440, 768, 390, 320])) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width <= 390 });
     await go('/login');
     await check(`${width} login`);
@@ -160,6 +162,114 @@ try {
     assert.deepEqual(errors, [], 'Errores de consola en acceso público');
     console.log('OK: login responsive y cuatro rutas protegidas sin sesión. No se probaron cuentas reales.');
     await send('Browser.close');
+  } else if (guardsOnly) {
+    const env=parseEnv(await readFile(join(root,'.env.local'),'utf8'));
+    const {createServerClient}=await import('@supabase/ssr');
+    const cookieJar=new Map();
+    const client=createServerClient(env.NEXT_PUBLIC_SUPABASE_URL,env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{
+      cookies:{getAll:()=>[...cookieJar].map(([name,value])=>({name,value})),setAll:values=>values.forEach(({name,value})=>cookieJar.set(name,value))},
+    });
+    // Verifica una sesión válida aunque el login del panel rechace el perfil deshabilitado.
+    // No modifica la cuenta ni cambia sus permisos.
+    const result=await client.auth.signInWithPassword({email:credentials.DEMO_SELLER_EMAIL,password:credentials.DEMO_SELLER_PASSWORD});
+    assert(!result.error,'No se pudo autenticar la cuenta de revisión');
+    try {
+      const own=await client.from('profiles').select('id,role,is_enabled').eq('id',result.data.user.id).maybeSingle();
+      assert(!own.error);
+      assert(!own.data || own.data.role==='seller','Esta prueba requiere vendedor');
+      const enabled=own.data?.is_enabled===true;
+      await send('Network.setCookies',{cookies:[...cookieJar].map(([name,value])=>({name,value,url:base,path:'/',httpOnly:true,sameSite:'Lax'}))});
+      for(const route of enabled ? ['/usuarios','/vehiculos/nuevo','/vehiculos/e2000001-0000-4000-8000-000000000001/editar'] : ['/','/clientes','/usuarios','/vehiculos']) {
+        await send('Page.navigate',{url:base+route});
+        await until(`location.pathname === '/acceso-denegado' && !!document.querySelector('h1')`);
+        assert.equal(await evaluate(`!!document.querySelector('.crm-lead-row,.crm-customer-row,.users-table')`),false);
+      }
+      assert.deepEqual(errors,[],'Errores en rechazo de acceso');
+      console.log(`OK: JWT válido, ${enabled ? 'restricción de vendedor' : 'perfil deshabilitado rechazado'} antes de mostrar datos.`);
+    } finally { await client.auth.signOut({scope:'local'}); }
+    await send('Browser.close');
+  } else if (timingOnly) {
+    await signIn('admin');
+    const timings = [];
+    for (let round=0; round<3; round++) {
+      for (const route of ['/', '/clientes', '/oportunidades/e2000003-0000-4000-8000-000000000003']) {
+        const started = performance.now();
+        await go(route);
+        timings.push({round,route,ms:Math.round(performance.now()-started-200)});
+      }
+    }
+    console.log(JSON.stringify({timings,errors}));
+    await writeFile(join(output,'timings.json'),JSON.stringify({timings,errors},null,2));
+    assert.deepEqual(errors,[]);
+    await click('Salir'); await until(`location.pathname === '/login'`); await send('Browser.close');
+  } else if (crmOnly) {
+    await signIn('admin');
+    if(process.argv.includes('--notifications')) {
+      const feed=await evaluate(`fetch('/api/notificaciones',{cache:'no-store'}).then(r=>r.json())`);
+      const notification=feed.rows.find(row=>row.lead_id==='e2000001-0000-4000-8000-000000000001');
+      assert(notification,'Reiniciar el seed antes de probar el aviso recurrente');
+      await evaluate(`document.querySelector('.assignment-notifications').open=true`);
+      await until(`!!document.querySelector('.notification-panel li button')`);
+      const reference=`OP-${String(notification.leads.reference_number).padStart(6,'0')}`;
+      await click(reference);
+      await until(`location.pathname === '/oportunidades/${notification.lead_id}' && !!document.querySelector('.crm-management')`);
+      const updated=await evaluate(`fetch('/api/notificaciones',{cache:'no-store'}).then(r=>r.json())`);
+      assert(!updated.rows.some(row=>row.id===notification.id),'El aviso debe quedar leído');
+      console.log('OK: aviso recurrente abre la ficha y persiste como leído. Restablecer seed al finalizar.');
+    }
+    for (const width of (smoke ? [1440,390] : [1440,768,390,320])) {
+      await send('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<=390});
+      for (const route of ['/', '/?tab=mine', '/?tab=all', '/clientes']) {
+        await go(route); await check(`${width} CRM ${route}`);
+        assert.equal(await evaluate(`!!document.querySelector('.preview-banner')`),false);
+        assert.equal(await evaluate(`!!document.querySelector('main [role="alert"]')`),false,'Consulta real sin errores');
+      }
+      await capture(`crm-clientes-${width}`);
+      await evaluate(`document.querySelector('.assignment-notifications').open=true`);
+      await until(`!document.querySelector('.notification-panel footer button').disabled`);
+      await check(`${width} notificaciones`); await capture(`crm-notificaciones-${width}`);
+      await evaluate(`document.querySelector('.assignment-notifications').open=false`);
+      const customers = await evaluate(`[...document.querySelectorAll('.crm-customer-row')].slice(0,5).map(el => new URL(el.href).pathname)`);
+      for (const route of customers) {
+        await go(route); await check(`${width} ficha cliente`);
+        assert.equal(await evaluate(`!!document.querySelector('main [role="alert"]')`), false);
+      }
+      if (customers.length) await capture(`crm-historial-cliente-${width}`);
+      await go('/?tab=all');
+      const leads = await evaluate(`[...document.querySelectorAll('.crm-lead-link')].slice(0,7).map(el => new URL(el.href).pathname)`);
+      for (const route of leads) {
+        await go(route); await check(`${width} ficha oportunidad`);
+        assert.equal(await evaluate(`!!document.querySelector('main [role="alert"]')`), false, 'Detalle sin errores');
+        assert.match(await evaluate(`document.querySelector('.page-heading p:last-child')?.textContent ?? document.querySelector('main').textContent`),/OP-\d{6,}/);
+        assert.equal(await evaluate(`[...document.querySelectorAll('.crm-timeline li')].every(el => getComputedStyle(el).display === 'grid' && !!el.querySelector('time[datetime]'))`), true);
+      }
+      if (leads.length) {
+        await capture(`crm-ficha-${width}`);
+        // Validar Perdido sin motivo no escribe ni altera la muestra.
+        await go(leads[0]);
+        if (await evaluate(`!!document.querySelector('select[name="status"]')`)) {
+          await change('select[name="status"]','lost'); await click('Actualizar estado');
+          await until(`!!document.querySelector('#lead-reason-error')`);
+          assert.equal(await evaluate(`document.activeElement.name`),'reason');
+          await check(`${width} motivo obligatorio`);
+        }
+      }
+      await go('/'); await capture(`crm-espera-${width}`);
+      console.log(`OK: CRM conectado a ${width}px; ${customers.length} fichas de cliente y ${leads.length} oportunidades, sin guardar cambios.`);
+    }
+    await go('/?tab=mine');
+    await change('select[name="status"]','lost'); await click('Filtrar');
+    await until(`new URLSearchParams(location.search).get('status') === 'lost'`);
+    await go('/clientes'); await change('input[name="q"]','Sin coincidencia CRM'); await click('Buscar');
+    await until(`new URLSearchParams(location.search).get('q') === 'Sin coincidencia CRM'`);
+    for (const route of ['/clientes/demo-ana','/oportunidades/demo-consulta-ana','/oportunidades/c1000000-0000-4000-8000-000000000001']) {
+      await send('Page.navigate',{url:base+route});
+      await until(`document.querySelector('main')?.textContent.includes('no disponible')`);
+      assert.equal(await evaluate(`document.querySelector('main').textContent.includes('Ana Martínez')`),false);
+    }
+    await writeFile(join(output,'report-crm.json'),JSON.stringify({assertions,errors},null,2));
+    assert.deepEqual(errors,[],'Errores CRM');
+    await click('Salir'); await until(`location.pathname === '/login'`); await send('Browser.close');
   } else if (inventoryOnly) {
     await signIn('admin');
     await go('/vehiculos');
@@ -287,112 +397,8 @@ try {
     await click('Salir');
     await until(`location.pathname === '/login'`);
     await send('Browser.close');
-  } else {
-  const routes = smoke ? ['/', '/clientes/demo-bruno', '/oportunidades/demo-consulta-bruno', '/vehiculos'] : ['/', '/clientes', '/vehiculos', '/clientes/demo-ana', '/clientes/demo-bruno', '/oportunidades/demo-consulta-ana', '/oportunidades/demo-consulta-bruno', '/vehiculos/nuevo', '/clientes/vista-previa', '/oportunidades/vista-previa'];
-  for (const width of (smoke ? [1440, 390] : [1440, 768, 390, 320])) {
-    await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width <= 390 });
-    for (const role of ['vendedor', 'admin']) {
-      await signIn(role);
-      for (const route of routes) {
-        if (role === 'vendedor' && route === '/vehiculos/nuevo') {
-          await send('Page.navigate', { url: base + route });
-          await until(`location.pathname === '/acceso-denegado' && !!document.querySelector('h1')`);
-          continue;
-        }
-        await go(route);
-        await check(`${width} ${route} ${role}`);
-        if (route.endsWith('/editar') || route.endsWith('/nuevo')) assert.equal(await evaluate(`!!document.querySelector('main form')`), role === 'admin', 'Formulario Admin');
-        const tabs = route.startsWith('/oportunidades/demo-') ? ['Historial', 'Seguimiento', 'Conversación'] : route.startsWith('/clientes/demo-') ? ['Recontactos', 'Compras', 'Consultas'] : [];
-        for (const tab of tabs) { await click(tab); await check(`${width} ${route} ${role} ${tab}`); }
-      }
-      if (role === 'admin') {
-        await go('/usuarios');
-        await until(`!!document.querySelector('.users-table')`);
-        await check(`${width} usuarios admin`);
-        assert.match(await evaluate('document.querySelector("main").textContent'), /Vendedor Demo/);
-        if (width === 1440 || width === 390) await capture(`usuarios-${width}`);
-      } else {
-        await send('Page.navigate', { url: base + '/usuarios' });
-        await until(`location.pathname === '/acceso-denegado' && !!document.querySelector('h1')`);
-        assert.equal(await evaluate(`!!document.querySelector('.users-table')`), false, 'Vendedor no recibe lista de usuarios por URL');
-        assert.equal(await evaluate(`document.body.textContent.includes(${JSON.stringify(credentials.DEMO_ADMIN_EMAIL)})`), false, 'No se revela correo del administrador');
-      }
-    }
-    await go('/');
-    await click('Mis oportunidades');
-    await check(`${width} Mis oportunidades`);
-    console.log(`OK: ${width}px, ambos roles, listados y secciones de fichas.`);
-    if (width === 1440 || width === 390) {
-      await go('/'); await capture(`bandeja-${width}`);
-      await go('/oportunidades/demo-consulta-bruno');
-      await click('Historial'); await capture(`historial-${width}`);
-      await click('Seguimiento'); await capture(`actividades-${width}`);
-      await click('Conversación'); await capture(`conversacion-${width}`);
-    }
-  }
-  await go('/');
-  assert.match(await evaluate(`document.querySelector('.panel-footer').textContent`), /1 oportunidad de ejemplo/);
-  await click('Mis oportunidades');
-  assert.match(await evaluate(`document.querySelector('.demo-list').textContent`), /Bruno López/);
-  await change('input[type=search]', 'inexistente');
-  assert.match(await evaluate('document.body.textContent'), /0 oportunidades de ejemplo/);
-  await go('/clientes');
-  await change('input[type=search]', 'martinez');
-  assert.match(await evaluate(`document.querySelector('.panel-footer').textContent`), /1 cliente de ejemplo/);
-  await go('/vehiculos');
-  assert.equal(await evaluate(`!!document.querySelector('.inventory-filters')`), true);
-  assert.equal(await evaluate(`!!document.querySelector('.preview-banner')`), false);
-  await go('/oportunidades/demo-consulta-ana');
-  await click('Historial'); await click('Ver mensaje original');
-  await until(`document.activeElement.id === 'demo-mensaje-ana-1'`);
-  await go('/clientes/demo-bruno');
-  assert.deepEqual(await evaluate(`[...document.querySelectorAll('.metric > strong')].map(el => el.textContent)`), ['1', '4', '1', '1']);
-  await go('/vehiculos/nuevo');
-  assert.equal(await evaluate(`document.querySelector('input[name=brand]').value`), '');
-  await go('/usuarios');
-  await until(`!!document.querySelector('.users-table')`);
-  await click('Editar');
-  await until(`!!document.querySelector('dialog[open] input[name=full_name]')`);
-  const incompleteContact = await evaluate(`!document.querySelector('input[name=contact_phone]').value || !document.querySelector('input[name=contact_email]').value`);
-  await evaluate(`document.querySelector('.user-editor-form').requestSubmit()`);
-  if (incompleteContact) {
-    await until(`!!document.querySelector('.user-editor-form .field-error')`);
-    await click('Cancelar');
-  } else {
-    await until(`document.querySelector('.user-editor-success [role=status]')?.textContent.includes('actualizados')`);
-    await click('Volver al equipo');
-  }
-  await click('Crear vendedor');
-  await until(`!!document.querySelector('dialog[open] input[name=email]')`);
-  await change('input[name=email]', credentials.DEMO_SELLER_EMAIL);
-  await change('.user-editor-form input[name=full_name]', 'Vendedor Demo');
-  await change('input[name=contact_email]', credentials.DEMO_SELLER_EMAIL);
-  await change('input[name=contact_phone]', '+5491112345678');
-  await change('input[name=password]', credentials.DEMO_SELLER_PASSWORD);
-  await evaluate(`document.querySelector('.user-editor-form').requestSubmit()`);
-  await until(`[...document.querySelectorAll('[role=alert]')].some(el => el.textContent.includes('No se pudo crear'))`);
-  await evaluate(`document.querySelector('input[name=password]').value = ''`);
-  await click('Cancelar');
-  if (hmr) {
-    await go('/');
-    originalCss = await readFile(cssPath, 'utf8');
-    await writeFile(cssPath, originalCss + '\n.demo-row { --ui-regression-marker: applied; }\n');
-    await until(`getComputedStyle(document.querySelector('.demo-row')).getPropertyValue('--ui-regression-marker').trim() === 'applied'`);
-    await writeFile(cssPath, originalCss);
-    originalCss = undefined;
-    await until(`getComputedStyle(document.querySelector('.demo-row')).getPropertyValue('--ui-regression-marker').trim() === ''`);
-    await check('CSS HMR sin recarga');
-    console.log('OK: cambios de CSS aplicados y revertidos sin recarga ni reinicio.');
-  }
-  await writeFile(join(output, 'report.json'), JSON.stringify({ assertions, errors }, null, 2));
-  assert.deepEqual([...new Set(errors.map((error) => error.split('\n')[0]))], [], 'Errores de consola/hidratación (detalle en report.json)');
-  console.log(JSON.stringify({ assertions, mode: hmr ? 'dev + HMR' : 'build', errors, screenshots: output }));
-  await click('Salir');
-  await until(`location.pathname === '/login'`);
-  await send('Browser.close');
   }
 } finally {
-  if (originalCss !== undefined) await writeFile(cssPath, originalCss);
   for (const call of pending.values()) clearTimeout(call.timer);
   socket?.close();
   browser.kill();

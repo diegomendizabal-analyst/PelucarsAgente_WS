@@ -1,20 +1,8 @@
 import { Suspense } from "react";
 import Loading from "@/app/loading";
-import { notFound } from "next/navigation";
-import { DemoOpportunityDetail } from "@/components/demo-details";
-import { demoOpportunities } from "@/lib/demo-data";
+import { OpportunityDetail } from "@/components/crm-detail";
 
-export const metadata = { title: "Oportunidad de demostración" };
-export function generateStaticParams() {
-  return demoOpportunities.map(({ id }) => ({ id }));
-}
-export default function Page({ params }: { params: Promise<{ id: string }> }) {
-  return <Suspense fallback={<Loading />}><Details params={params} /></Suspense>;
-}
-
-async function Details({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const opportunity = demoOpportunities.find((item) => item.id === id);
-  if (!opportunity) notFound();
-  return <DemoOpportunityDetail key={id} opportunity={opportunity} />;
+export const metadata = { title: "Ficha de oportunidad" };
+export default function Page(props: { params: Promise<{ id: string }>; searchParams:Promise<Record<string,string | string[] | undefined>> }) {
+  return <Suspense fallback={<Loading />}><OpportunityDetail {...props} /></Suspense>;
 }
