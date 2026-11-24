@@ -460,9 +460,9 @@ try {
       console.log(`OK: CRM conectado a ${width}px; ${customers.length} fichas de cliente y ${leads.length} oportunidades, sin guardar cambios.`);
     }
     await go('/oportunidades?tab=mine');
-    await change('select[name="status"]','lost'); await click('Filtrar');
+    await change('select[name="status"]','lost');
     await until(`new URLSearchParams(location.search).get('status') === 'lost'`);
-    await go('/clientes'); await change('input[name="q"]','Sin coincidencia CRM'); await click('Buscar');
+    await go('/clientes'); await change('input[name="q"]','Sin coincidencia CRM');
     await until(`new URLSearchParams(location.search).get('q') === 'Sin coincidencia CRM'`);
     for (const route of ['/clientes/demo-ana','/oportunidades/demo-consulta-ana','/oportunidades/c1000000-0000-4000-8000-000000000001']) {
       await send('Page.navigate',{url:base+route});

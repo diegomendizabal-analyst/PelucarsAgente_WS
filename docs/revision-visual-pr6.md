@@ -30,6 +30,7 @@ La migración **pendiente de aplicar** `20261124153608_vehicle_catalog_source_un
 | Controles pequeños para interacción táctil | Rangos y widget en emulación táctil móvil | Ampliar zonas táctiles de deslizadores, selectores y botones; campos exactos más legibles |
 | Pestaña activa cortada en Oportunidades | Abrir Todas las oportunidades a 390/320 px | Permitir que las pestañas ocupen otra fila, conservando el indicador activo |
 | Dirección del conversor cortada a 320 px | Abrir calculadora con controles táctiles | Una columna para Conversión/Cotización en el ancho más pequeño |
+| Nombre de cliente comprimido por el contador de consultas | Listado de Clientes a 320 px; nombre partido en fragmentos cortos | Fila móvil en grilla con contador/fecha debajo del nombre y teléfono |
 
 Los placeholders se oscurecieron para mejorar su contraste. El indicador transitorio de filtros reserva su espacio para evitar que los resultados salten al comenzar/terminar la consulta. La segunda pasada detectó que el título largo también contraía el contenedor del botón; se corrigió sobre `.heading-action`, sin ocultar el botón ni el desborde.
 
@@ -61,6 +62,7 @@ Comparativas recortadas de las capturas reales (izquierda: antes; derecha: despu
 - [Cotización/calculadora a 768 px](evidencia/pr6/dolar-tablet.png).
 - [Presupuesto y moneda a 768 px](evidencia/pr6/presupuesto-tablet.png).
 - [Pestañas de Oportunidades a 390 px](evidencia/pr6/pestanas-movil.png).
+- [Identidad y consultas del cliente a 320 px](evidencia/pr6/clientes-movil.png).
 
 La pasada final produjo 113 capturas/observaciones, sin desbordes de página, superposiciones del encabezado ni errores de JavaScript. Al inspeccionar las imágenes se detectó también un defecto del script: concatenaba `/editar` después de un `?` final del enlace del catálogo y capturaba la ficha. Se corrigió usando el pathname, se agregó una comprobación del campo Marca y se repitieron alta/edición reales en los cinco anchos (10 capturas adicionales que sustituyen las anteriores). Se inspeccionaron las capturas corregidas, incluidos los textos largos y las acciones de los modales.
 
@@ -72,5 +74,13 @@ La pasada final produjo 113 capturas/observaciones, sin desbordes de página, su
 - **Regresión Reportes aprobada:** `npm.cmd run check:ui -- http://localhost:3104 --reports --smoke`; 11 comprobaciones y ningún error de JavaScript. Incluye fechas/vendedor, detalle, campos exactos/deslizadores, demo/vacío y actualización de cotización.
 - **Regresión calculadora aprobada:** `npm.cmd run check:ui -- http://localhost:3104 --exchange --smoke`; ARS/USD, Compra/Venta explícitas, valores inválidos/cero/vacío, foco y tres anchos.
 - Los placeholders ahora tienen contraste aproximado **5,33:1 sobre blanco**, frente a 4,19:1 antes. No equivale a una certificación de accesibilidad integral.
+
+## Ajuste solicitado durante la revisión: filtros de CRM
+
+Clientes y Oportunidades todavía utilizaban formularios con envío manual. Se sustituyeron por componentes que reutilizan `useAutoFilters`: búsqueda por nombre/teléfono con espera de 300 ms y cambio de estado inmediato, navegación sin recargar y sin mover el scroll. Cada cambio reinicia la paginación; Oportunidades conserva la bandeja seleccionada. Enter sigue disponible como atajo, pero deja de ser necesario. Se conserva un indicador transitorio de actualización y se retiran Buscar/Filtrar.
+
+Recorrido reproducible aprobado: `npm.cmd run check:ui -- http://localhost:3104 --review --crm-filters-only --smoke`. Comprueba última búsqueda, búsqueda sin coincidencias y limpieza, estado perdido/Todos, foco, ausencia de recarga, reinicio de página y correspondencia entre filtro/resultados en los cinco anchos. La primera ejecución no pudo autenticar al admin; el reintento con las mismas credenciales funcionó, sin alterar cuentas. La inspección de estas capturas detectó además el nombre de cliente comprimido en móvil; se acomodó el contador/fecha debajo de la identidad. Lint, TypeScript y build se repitieron tras el cambio de filtros.
+
+Pendiente de producto para después: acordar cómo organizar la vista de todos los Clientes para el administrador. No se rediseña esa vista ni se cambian permisos en esta entrega; también queda anotado en continuidad.
 
 Limitaciones: revisión en Chrome con emulación de tamaño/tacto; pendiente comprobación física en iOS/Android y otros motores. El error de proveedor se simula en el navegador, no interrumpiendo DolarAPI ni Supabase. No se crean cuentas o datos adicionales para cubrir estados. Ventas, bot, score y actividades conservan sus estados previos; esta revisión no completa esas integraciones.

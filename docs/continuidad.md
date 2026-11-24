@@ -38,6 +38,8 @@ Las pruebas SQL usan PostgreSQL WASM en memoria con identidades ficticias locale
 
 ## Próximos pasos
 
+Pendiente de diseño solicitado durante la revisión de PR #6: repensar la vista de **todos los Clientes para el administrador**. Acordar organización y navegación antes de implementar; esta entrega conserva la vista actual y sólo cambia el filtrado manual por automático en Clientes y Oportunidades.
+
 1. Revisar frontend y publicar dentro del flujo acordado. Antes de ingresar datos reales, preparar purga revisada de muestras y retirar herramienta temporal; apagar el flag no elimina registros. Revisar inventario anterior sin clasificación fiable. No hay purga ejecutada ahora.
 2. Capturar responsable histórico del cierre antes de reportar pérdidas individuales. No atribuir al admin que cambió el estado ni rellenar con el responsable actual.
 3. Implementar ventas como módulo independiente tras cerrar corrección/anulación (D17); conectar sus métricas por vendedor de cierre y moneda. No marcar stock vendido cambiando una etiqueta.

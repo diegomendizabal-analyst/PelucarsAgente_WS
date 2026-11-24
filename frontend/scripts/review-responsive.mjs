@@ -53,6 +53,40 @@ export async function reviewResponsive({ send, evaluate, until, go, change, clic
     assert(await evaluate(`document.activeElement === ${trigger}`),'Se devuelve el foco al disparador');
   }
   await signIn('admin');
+  if(process.argv.includes('--crm-filters-only')) {
+    for(const width of [1440,1024,768,390,320]) {
+      await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<=390});
+      await send('Emulation.setTouchEmulationEnabled',{enabled:width<=390});
+      await go('/clientes');
+      const name=await evaluate(`document.querySelector('.crm-customer-row h2').textContent`);
+      await go('/clientes?page=2');
+      await evaluate(`window.__filterSession=true; window.__filterInput=document.querySelector('input[name="q"]'); window.__filterInput.focus()`);
+      await change('input[name="q"]','NO-COINCIDE-REVISION');
+      await change('input[name="q"]',name);
+      await until(`new URLSearchParams(location.search).get('q')===${JSON.stringify(name)} && !document.querySelector('[data-pending]')`);
+      assert(await evaluate(`window.__filterSession && window.__filterInput===document.querySelector('input[name="q"]') && document.activeElement===window.__filterInput && !new URLSearchParams(location.search).has('page')`),'Sin recarga, foco conservado y paginación reiniciada');
+      assert(await evaluate(`!!document.querySelector('.crm-customer-row') && [...document.querySelectorAll('.crm-customer-row h2')].every(el=>el.textContent.includes(${JSON.stringify(name)}))`),'Resultados corresponden a la última búsqueda');
+      await shot(`crm-${width}-clientes-automatico`);
+      await change('input[name="q"]','NO-COINCIDE-REVISION');
+      await until(`!document.querySelector('[data-pending]') && !document.querySelector('.crm-customer-row')`);
+      await change('input[name="q"]','');
+      await until(`!document.querySelector('[data-pending]') && !!document.querySelector('.crm-customer-row')`);
+      await go('/oportunidades?tab=all&page=2');
+      await evaluate(`window.__filterSession=true; document.querySelector('select[name="status"]').focus()`);
+      await change('select[name="status"]','lost');
+      await until(`new URLSearchParams(location.search).get('status')==='lost' && !document.querySelector('[data-pending]')`);
+      assert(await evaluate(`window.__filterSession && !new URLSearchParams(location.search).has('page') && new URLSearchParams(location.search).get('tab')==='all' && !!document.querySelector('.crm-lead-row') && [...document.querySelectorAll('.crm-lead-row .inventory-status')].every(el=>el.classList.contains('withdrawn'))`),'Estado automático conserva bandeja y coincide con resultados');
+      await shot(`crm-${width}-oportunidades-automatico`);
+      await change('select[name="status"]','');
+      await until(`!new URLSearchParams(location.search).get('status') && !document.querySelector('[data-pending]')`);
+      assert(await evaluate(`!!document.querySelector('.crm-lead-row .inventory-status:not(.withdrawn)')`));
+    }
+    await writeFile(join(output,'review-crm-filters.json'),JSON.stringify({phase,observations,errors},null,2));
+    assert.deepEqual(observations.filter(o=>o.pageOverflow || o.overlaps.length),[]);
+    assert.deepEqual(errors,[]);
+    console.log('OK: filtros CRM automáticos, última búsqueda, foco, sin recarga, paginación, vacío y cinco anchos.');
+    return;
+  }
   await go('/oportunidades?tab=all');
   const lead=await evaluate(`document.querySelector('.crm-lead-link')?.getAttribute('href')`);
   await go('/clientes');

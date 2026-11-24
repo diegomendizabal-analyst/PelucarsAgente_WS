@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import Form from "next/form";
+import { OpportunityFilters } from "@/components/crm-filters";
 import Loading from "@/app/loading";
 import { requireAccount } from "@/lib/auth/session";
 import { crmPage, listLeads, listPending } from "@/lib/crm/data";
@@ -21,7 +21,7 @@ async function Inbox({searchParams}:{searchParams:Search}) {
   const error=pending?.error || leads?.error;
   return <><PageHeading eyebrow="GESTIÓN COMERCIAL" title="Oportunidades" description="Consultas en espera y oportunidades a tu cargo." action={<RefreshCrm/>}/>
     <section className="panel crm-inbox"><nav className="crm-tabs" aria-label="Bandejas"><Link href="/oportunidades" aria-current={tab==='waiting' ? 'page' : undefined}>En espera</Link><Link href="/oportunidades?tab=mine" aria-current={tab==='mine' ? 'page' : undefined}>Mis oportunidades</Link>{account.role==='admin' && <Link href="/oportunidades?tab=all" aria-current={tab==='all' ? 'page' : undefined}>Todas las oportunidades</Link>}</nav>
-      {tab!=='waiting' && <Form action="/oportunidades" className="crm-toolbar"><input type="hidden" name="tab" value={tab}/><label>Estado<select name="status" defaultValue={status} key={status}><option value="">Todos los estados</option>{Object.entries(leadStatuses).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label><button className="button secondary">Filtrar</button></Form>}
+      {tab!=='waiting' && <OpportunityFilters tab={tab} status={status}/>}
       {error ? <CrmError/> : <>{pending ? <PendingRows rows={pending.rows}/> : <LeadRows rows={leads?.rows ?? []} waiting={tab==='waiting'}/>}<CrmPagination page={page} count={pending?.count ?? leads?.count ?? 0} href={next=>`/oportunidades?${new URLSearchParams({tab,status,page:String(next)})}`}/></>}
     </section></>;
 }
