@@ -53,7 +53,7 @@ export function AssignmentNotifications() {
       <p className="notification-help">Nuevas consultas y cambios de responsable. Se revisan cada 45 segundos mientras el panel está visible.</p>
       {message && <p role="alert" className="field-error">{message}</p>}
       {feed.rows.length ? <ul>{feed.rows.map(row=><li key={row.id}><button disabled={opening} onClick={()=>open(row.id)}><strong>{leadReference(row.leads.reference_number)}</strong><span>Tenés una oportunidad para atender</span><time dateTime={row.created_at}>{crmDate(row.created_at)}</time></button></li>)}</ul> : !feed.error && <p className="notification-empty">{loading ? 'Consultando avisos…' : 'No tenés asignaciones nuevas sin leer.'}</p>}
-      <footer><Link href="/?tab=mine" onClick={()=>{if(details.current)details.current.open=false;}}>Ir a Mis oportunidades</Link><button className="button secondary" onClick={()=>{setLoading(true);void refresh();}} disabled={loading || opening}><RefreshCw size={13}/>{loading ? 'Actualizando…' : 'Actualizar'}</button></footer>
+      <footer><Link href="/oportunidades?tab=mine" onClick={()=>{if(details.current)details.current.open=false;}}>Ir a Mis oportunidades</Link><button className="button secondary" onClick={()=>{setLoading(true);void refresh();}} disabled={loading || opening}><RefreshCw size={13}/>{loading ? 'Actualizando…' : 'Actualizar'}</button></footer>
     </section>
   </details>;
 }

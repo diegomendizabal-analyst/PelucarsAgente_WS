@@ -1,5 +1,7 @@
 # Observaciones pendientes del frontend
 
+Actualización 24/11/2026: implementados BackLink reconocible, interés sin recuadro anidado, ocultar paginación de una sola página y Resumen de la consulta. Reportes y oportunidades por vehículo conectados, filtros automáticos, rangos con sliders/valor exacto, interruptor temporal demo/vacío y DolarAPI oficial provisional. Tipografía/paleta conservadas. Ver [reportes.md](reportes.md) y [demo-temporal.md](demo-temporal.md) para estados y pruebas. Ventas/score sólo tienen interfaz pendiente de fuente. El resto conserva observaciones históricas.
+
 Registradas el 17/11/2026 a partir de las capturas del usuario. Corregidas localmente el **18/11/2026**, por pedido del usuario. Se conserva el detalle original para explicar los cambios; la validación no implica merge ni publicación.
 
 ## Diagnóstico y corrección

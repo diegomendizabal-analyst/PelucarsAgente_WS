@@ -6,7 +6,7 @@ export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   let authenticated = false;
   let adminAllowed = true;
-  const adminPath = request.nextUrl.pathname === "/usuarios" || request.nextUrl.pathname.startsWith("/usuarios/") || request.nextUrl.pathname === "/vehiculos/nuevo" || /^\/vehiculos\/[^/]+\/editar$/.test(request.nextUrl.pathname);
+  const adminPath = request.nextUrl.pathname === "/reportes" || request.nextUrl.pathname.startsWith("/reportes/") || request.nextUrl.pathname === "/usuarios" || request.nextUrl.pathname.startsWith("/usuarios/") || request.nextUrl.pathname === "/vehiculos/nuevo" || /^\/vehiculos\/[^/]+\/editar$/.test(request.nextUrl.pathname);
   const publicPath = request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/acceso-denegado";
   const config = supabaseConfig();
   if (config) {

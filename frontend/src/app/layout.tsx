@@ -5,6 +5,7 @@ import "./records.css";
 import "./auth.css";
 import "./inventory.css";
 import "./crm.css";
+import "./reports.css";
 
 const manrope = localFont({
   src: "./fonts/manrope-latin-variable.woff2",
