@@ -10,6 +10,8 @@ Las referencias recibidas se incorporaron sin modificar a [alcance V3](referenci
 
 ## Entrega local
 
+Corrección posterior a PR #6: nueva migración **local, no aplicada** `20261124153608_vehicle_catalog_source_uniqueness.sql` para unicidad de catálogo por origen, marca/modelo normalizados. Reproducción y regresión local verificadas. Revisión visual/responsive y límites de roles: [revisión de PR #6](revision-visual-pr6.md). La prohibición actual de aplicar migraciones remotas sigue vigente.
+
 Revisión visual posterior del 24/11: se compactaron Reportes y filtros; estados con etiqueta/cifra juntas, definiciones desplegables, ventas/score agrupados sin ceros ficticios, mayor contraste y eliminación de ayudas repetitivas/banda demo. Rangos sobre una barra con dos extremos y campos exactos. Dólar como control compacto en barra superior, detalle desplegable y botón Actualizar que consulta nuevamente al proveedor. El interruptor demo recarga tras guardar la cookie y muestra “Cambiando…”. El fallo informado no se reprodujo en una sesión limpia de localhost:3000; se agregó esta recarga para asegurar actualización completa. Confirmación posterior: calculadora informativa con elección Compra/Venta autorizada e implementada; ver detalle abajo.
 
 - Pantalla `/reportes`, detalle paginado `/reportes/detalle`, navegación e inicio por rol. Oportunidades se encuentra en `/oportunidades`.

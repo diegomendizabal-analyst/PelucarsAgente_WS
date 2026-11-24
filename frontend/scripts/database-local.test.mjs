@@ -16,7 +16,7 @@ test('migraciones y regresiones SQL en PostgreSQL aislado', async () => {
       try { await db.exec(await readFile(new URL(`migrations/${file}`,root),'utf8')); }
       catch(error) { throw new Error(`Migración ${file}: ${error.message}`); }
     }
-    for(const file of ['identity.sql','inventory.sql','inventory-conversion.sql','crm.sql','crm-recurrence.sql','reports.sql']) {
+    for(const file of ['identity.sql','inventory.sql','inventory-conversion.sql','inventory-source-uniqueness.sql','crm.sql','crm-recurrence.sql','reports.sql']) {
       try { await db.exec(await readFile(new URL(`tests/${file}`,root),'utf8')); }
       catch(error) { throw new Error(`Prueba ${file}: ${error.message}`); }
     }

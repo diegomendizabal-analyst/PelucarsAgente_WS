@@ -52,6 +52,9 @@ svg { flex-shrink: 0; vertical-align: middle; }
 .preview-tag { margin-left: auto; padding: 2px 6px; font-size: 9px; font-weight: 650; letter-spacing: 1px; background: #fff; border: 1px solid #d9d9de; border-radius: 3px; }
 .page-content { width: 100%; max-width: 1520px; padding: 36px 36px 48px; margin: 0 auto; flex: 1; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.page-heading > div { min-width: 0; max-width: 100%; }
+.page-heading > .heading-action { flex-shrink: 0; }
+.page-heading h1 { overflow-wrap: anywhere; }
 .eyebrow { color: #73737b; font-size: 10px; letter-spacing: 1.5px; font-weight: 700; }
 h1 { font-size: clamp(28px, 2.5vw, 36px); line-height: 1.2; font-weight: 700; letter-spacing: -1px; margin: 8px 0 12px; }
 .page-description { color: var(--muted); font-size: 14px; max-width: 700px; }
@@ -79,7 +82,7 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.2px; }
 .search-field svg { position: absolute; left: 13px; color: #8b8b93; }
 .search-field input { padding-left: 40px; font-size: 13px; }
 input, select, textarea { width: 100%; min-width: 0; min-height: 43px; padding: 11px 13px; color: var(--foreground); background: #fff; border: 1px solid #dcdce1; border-radius: 7px; }
-input::placeholder, textarea::placeholder { color: #7b7b84; opacity: 1; }
+input::placeholder, textarea::placeholder { color: #676b75; opacity: 1; }
 select:disabled { color: #64646d; background: #f6f6f7; }
 textarea { resize: vertical; }
 .filter-select { display: flex; align-items: center; position: relative; }
@@ -271,6 +274,16 @@ textarea { resize: vertical; }
 .is-spinning { animation:rotate-refresh 1s linear infinite; }
 @keyframes rotate-refresh { to { transform:rotate(360deg); } }
 @media(min-width:1350px) { .topbar { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); } .topbar .account-menu { justify-self:end; } }
-@media(max-width:1349px) { .topbar { flex-wrap:wrap; } .topbar .account-menu { margin-left:auto; } }
+@media(max-width:1349px) { .topbar { flex-wrap:wrap; } .topbar .account-menu { margin-left:auto; } .dollar-popover { left:auto; right:0; } }
 @media(max-width:760px) { .topbar .account-menu { flex-wrap:wrap; justify-content:flex-end; } .dollar-widget { margin-left:auto; } .dollar-popover { position:fixed; top:12px; left:20px; right:20px; width:auto; max-height:calc(100dvh - 24px); } }
 @media(prefers-reduced-motion:reduce) { .is-spinning { animation:none; } }
+
+.filter-status { display:flex; align-items:center; gap:8px; min-height:20px; color:var(--muted); font-size:12px; margin-top:6px; }
+.filter-status:not(:empty)::before { content:""; width:8px; height:8px; flex:0 0 8px; border-radius:50%; background:var(--accent); }
+@media(max-width:360px) { .dollar-calculator-fields { grid-template-columns:minmax(0,1fr); } }
+@media(pointer:coarse) {
+  button, a, summary, input, select { touch-action:manipulation; }
+  .dollar-refresh { width:44px; height:44px; }
+  .dollar-details > summary, .demo-switch-button { min-height:44px; }
+  .dollar-calculator input,.dollar-calculator select { min-height:44px; font-size:16px; }
+}

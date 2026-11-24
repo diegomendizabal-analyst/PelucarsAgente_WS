@@ -166,6 +166,10 @@ try {
     assert.deepEqual(errors, [], 'Errores de consola en acceso público');
     console.log('OK: login responsive y rutas protegidas sin sesión, incluyendo Reportes y detalle. No se probaron cuentas reales.');
     await send('Browser.close');
+  } else if (process.argv.includes('--review')) {
+    const { reviewResponsive } = await import('./review-responsive.mjs');
+    await reviewResponsive({ send, evaluate, until, go, change, click, signIn, root, credentials, errors });
+    await send('Browser.close');
   } else if (process.argv.includes('--budget')) {
     await signIn('admin');
     const catalog='/vehiculos?q=DEMO+Ford&currency=ARS&max_price=1000000000';

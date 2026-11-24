@@ -96,9 +96,10 @@
 }
 .inventory-range-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; grid-column:1 / -1; width:100%; margin-top:4px; }
 .range-filter { min-width:0; margin:0; padding:12px 16px 4px; border:1px solid var(--line); border-radius:9px; background:#f8f9fa; }
-.range-filter-header { display:flex; align-items:center; gap:12px; min-height:34px; margin-bottom:8px; }
+.range-filter-header { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; min-height:34px; margin-bottom:8px; }
 .range-filter-header strong { font-size:12px; font-weight:750; margin-right:auto; }
-.range-filter-header select { width:100px; min-height:32px; padding:4px 8px; font-size:12px; }
+.range-filter-header select { flex:0 0 100px; width:100px; min-height:32px; padding:4px 8px; font-size:12px; }
+.range-filter-header .text-link { margin-left:auto; }
 .inventory-filters .range-filter-header select { width:100px; font-size:12px; }
 .range-filter-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .range-filter-fields label { min-width:0; display:grid; gap:4px; color:var(--muted); font-size:11px; font-weight:600; }
@@ -115,4 +116,19 @@
 .range-slider.is-disabled::before { background:#cbd0d7; }
 .range-slider.is-disabled input[type=range]::-webkit-slider-thumb { background:#858b96; box-shadow:none; pointer-events:none; }
 .range-slider.is-disabled input[type=range]::-moz-range-thumb { background:#858b96; box-shadow:none; pointer-events:none; }
-@media(max-width:760px) { .inventory-range-grid { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:1000px) {
+  .inventory-range-grid { grid-template-columns:minmax(0,1fr); }
+  .inventory-unit { grid-template-columns:minmax(0,1fr); }
+  .inventory-unit-data { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .inventory-unit-data > div:first-child { grid-column:1 / -1; }
+}
+@media(max-width:600px) { .inventory-unit-data > div:first-child { grid-column:1 / -1; } .inventory-unit-data .inventory-price { white-space:nowrap; } }
+@media(pointer:coarse) {
+  .range-filter-fields input { min-height:44px; font-size:16px; }
+  .range-filter-header select,.range-filter .text-link { min-height:44px; }
+  .range-slider { height:44px; margin-inline:22px; }
+  .range-slider::before { top:20px; }
+  .range-slider input[type=range] { inset:0 -22px; width:calc(100% + 44px); height:44px; }
+  .range-slider input[type=range]::-webkit-slider-thumb { width:44px; height:44px; border:12px solid transparent; background-clip:padding-box; box-shadow:none; }
+  .range-slider input[type=range]::-moz-range-thumb { box-sizing:border-box; width:44px; height:44px; border:12px solid transparent; background-clip:padding-box; box-shadow:none; }
+}

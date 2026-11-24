@@ -19,7 +19,9 @@
 .report-distribution dt { overflow-wrap:anywhere; }
 .report-distribution dd { font-weight:750; margin:0; text-align:right; font-variant-numeric:tabular-nums; }
 .report-table-wrap { overflow-x:auto; }
-.report-table { width:100%; border-collapse:collapse; text-align:left; }
+.report-table { width:100%; border-collapse:collapse; text-align:left; table-layout:fixed; }
+.report-table th,.report-table td { overflow-wrap:anywhere; }
+.report-table tbody th .text-link { display:inline-block; max-width:100%; }
 .report-table th,.report-table td { padding:10px 18px; border-bottom:1px solid var(--line); font-size:12px; }
 .report-table thead { color:var(--muted); font-size:12px; }
 .report-table tbody th { font-weight:600; }
@@ -28,7 +30,7 @@
 .report-method summary { cursor:pointer; font-weight:650; }
 .report-method p { margin-top:14px; color:var(--muted); }
 .report-detail-list { list-style:none; margin:0; padding:0; }
-.report-detail-list a { display:grid; padding:20px 24px; border-top:1px solid var(--line); gap:6px; }
+.report-detail-list a { display:grid; padding:20px 24px; border-top:1px solid var(--line); gap:6px; overflow-wrap:anywhere; }
 .report-detail-list a:hover { background:var(--soft); }
 .report-detail-list span { color:var(--muted); font-size:12px; }
 .report-updated { font-size:11px; color:var(--muted); }
@@ -53,6 +55,8 @@
 .report-card-help summary::-webkit-details-marker { display:none; }
 .report-card-help summary:hover { background:#e9ebef; }
 .report-card-help[open] p { padding-top:8px; border-top:1px solid var(--line); margin-top:6px; }
+.report-page:has(.report-filter-area[data-pending]) .report-section { opacity:.6; }
+@media(pointer:coarse) { .report-card-help summary { width:40px; height:40px; top:5px; right:5px; } .report-card h3 { padding-right:34px; } }
 @media(min-width:1400px) { .report-period-grid { grid-template-columns:repeat(5,minmax(0,1fr)); } }
 @media(max-width:1100px) { .report-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:600px) { .report-grid { grid-template-columns:minmax(0,1fr); } .report-outcomes,.report-integrations { grid-template-columns:minmax(0,1fr); } .report-filters { padding:16px; } .report-table th,.report-table td { padding:10px; } .report-scope { margin:4px 0 0; display:block; } .report-states dl { display:grid; width:100%; } .report-states dl > div { justify-content:space-between; } }

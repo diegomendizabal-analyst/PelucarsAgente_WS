@@ -1,5 +1,7 @@
 # Revisión de Reportes, demo e inventario — 24/11/2026
 
+Seguimiento posterior: [corrección de unicidad y revisión visual de PR #6](revision-visual-pr6.md). La nueva migración `20261124153608_vehicle_catalog_source_uniqueness.sql` se prueba sólo localmente y **no está aplicada a remoto**.
+
 Rama: `reportes-primer-incremento`. Base: `main`, originalmente `fa4be36`. Revisar el diff completo de la PR, conservando cualquier cambio local del usuario. La PR se entrega en borrador para revisión independiente y pruebas manuales; no implica autorización de merge ni despliegue.
 
 ## Contexto y alcance

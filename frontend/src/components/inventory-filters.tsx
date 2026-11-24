@@ -22,7 +22,7 @@ export function CatalogFilters({ filters, years }: { filters: InventoryFilters; 
         <RangeFilter label="Presupuesto" name="price" lower={value.minPrice} upper={value.maxPrice} min={0} max={value.currency === "ARS" ? 100000000 : 100000} step={0.01} disabled={!value.currency} onChange={(minPrice, maxPrice) => update({ ...value, minPrice, maxPrice })} accessory={<select aria-label="Moneda del presupuesto" name="currency" value={value.currency} onChange={e => update({ ...value, currency: e.target.value, minPrice: "", maxPrice: "" }, 0)}><option value="">Moneda</option><option value="USD">USD</option><option value="ARS">ARS</option></select>} />
       </div>
     </form>
-    {error && <p className="field-error" role="alert">{error}</p>}
-    <span className="sr-only" role="status">{pending ? "Actualizando resultados…" : ""}</span>
+    {error && <p className="field-error" role="alert">{error} Se mantienen los resultados de los últimos filtros válidos.</p>}
+    <span className="filter-status" role="status">{pending ? "Actualizando resultados…" : ""}</span>
   </div>;
 }

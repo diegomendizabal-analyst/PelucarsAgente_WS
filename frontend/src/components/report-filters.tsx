@@ -13,7 +13,7 @@ export function ReportFiltersForm({ filters, sellers }: { filters: ReportFilters
       <label>Hasta<input type="date" name="to" value={value.to} min="2000-01-01" max="2100-12-31" required onChange={e => update({ ...value, to: e.target.value })} /></label>
       <label>Vendedor<select name="seller" value={value.seller} onChange={e => update({ ...value, seller: e.target.value }, 0)}><option value="">Todos</option>{sellers.map(seller => <option value={seller.id} key={seller.id}>{seller.full_name}{seller.role === "admin" ? " · Admin" : ""}{!seller.is_enabled ? " · Deshabilitado" : ""}</option>)}</select></label>
     </form>
-    {!valid && <p className="field-error" role="alert">Revisá las fechas: desde no puede superar a hasta.</p>}
-    <span className="sr-only" role="status">{pending ? "Actualizando resultados…" : ""}</span>
+    {!valid && <p className="field-error" role="alert">Revisá las fechas: desde no puede superar a hasta. Se mantienen los resultados de los últimos filtros válidos.</p>}
+    <span className="filter-status" role="status">{pending ? "Actualizando resultados…" : ""}</span>
   </div>;
 }
