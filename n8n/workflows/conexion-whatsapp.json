@@ -1,0 +1,52 @@
+{
+  "name": "Pelucars — Prueba de conexión WhatsApp",
+  "nodes": [
+    {
+      "id": "44dece5b-a33e-45da-8e0e-a9ec516ef6dd",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "899ede80-db14-4d42-8e90-e958cf11f548",
+      "name": "WhatsApp Business Cloud",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "phoneNumberId": "1526007707255136",
+        "recipientPhoneNumber": "",
+        "messageType": "text",
+        "textBody": "Hola, esta es una prueba de conexión de Pelucars desde n8n."
+      },
+      "disabled": false
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Business Cloud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
