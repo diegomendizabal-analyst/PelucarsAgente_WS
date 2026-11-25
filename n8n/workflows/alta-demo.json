@@ -1,0 +1,406 @@
+{
+  "name": "Pelucars — Alta de prueba autorizada",
+  "nodes": [
+    {
+      "id": "adf4453a-2144-4098-a457-6e999797344a",
+      "name": "Consulta manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "21956803-7454-49fa-adbb-311b844593c1",
+      "name": "Clientes y oportunidades",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/customers",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,phone_e164,leads(id,reference_number,source,commercial_status,assigned_to,created_at)"
+            },
+            {
+              "name": "or",
+              "value": "(phone_e164.in.(+DEMO_REMITENTE_META,+DEMO_DESTINATARIO_META),id.eq.DEMO_CLIENTE_UUID)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9ece4604-d414-41bc-acca-e754dc673585",
+      "name": "Oportunidad propuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/leads",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id"
+            },
+            {
+              "name": "id",
+              "value": "eq.DEMO_OPORTUNIDAD_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "e30edfbc-9345-472e-8cf0-1159dceffbdf",
+      "name": "Conversación propuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/conversations",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id"
+            },
+            {
+              "name": "id",
+              "value": "eq.DEMO_CONVERSACION_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f8445b19-73c0-4ca4-8fab-ada06dec9b1e",
+      "name": "Verificar vacíos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "for(const name of [\"Clientes y oportunidades\",\"Oportunidad propuesta\",\"Conversación propuesta\"]) { const r=$(name).first().json;if(r.statusCode!==200 || !Array.isArray(r.body) || r.body.length!==0) throw new Error('Cambió la situación antes del alta: '+name); } return {json:{ok:true}};"
+      }
+    },
+    {
+      "id": "cbc6979b-108d-4efe-a3da-8d26246954c1",
+      "name": "Crear cliente nuevo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/customers",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"id\":\"DEMO_CLIENTE_UUID\",\"phone_e164\":\"+DEMO_REMITENTE_META\"}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "67051ca0-5548-41ba-be6a-7282a7c7579f",
+      "name": "Releer antes de la oportunidad",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1560,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/customers",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,phone_e164,leads(id,reference_number,source,commercial_status,assigned_to,created_at)"
+            },
+            {
+              "name": "or",
+              "value": "(phone_e164.in.(+DEMO_REMITENTE_META,+DEMO_DESTINATARIO_META),id.eq.DEMO_CLIENTE_UUID)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1119557b-dea4-45a3-a0af-b9b78f4dc5eb",
+      "name": "Verificar sin antecedentes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const a=$json.body; if($json.statusCode!==200 || a?.length!==1 || a[0].id!=='DEMO_CLIENTE_UUID' || a[0].phone_e164!=='+DEMO_REMITENTE_META' || !Array.isArray(a[0].leads) || a[0].leads.length!==0) throw new Error('Alta detenida por cambio de cliente u oportunidad');return {json:{ok:true}};"
+      }
+    },
+    {
+      "id": "c6ed5e37-97a8-4023-89a7-87891098072d",
+      "name": "Crear oportunidad nueva",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2080,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/leads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"id\":\"DEMO_OPORTUNIDAD_UUID\",\"customer_id\":\"DEMO_CLIENTE_UUID\",\"source\":\"demo\",\"commercial_status\":\"new_inquiry\"}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "0f364531-5527-4199-b174-2d8f33b33e44",
+      "name": "Comprobar oportunidad creada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2340,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/leads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,customer_id,reference_number,source,commercial_status,assigned_to,lead_assignments(id),lead_notifications(id)"
+            },
+            {
+              "name": "id",
+              "value": "eq.DEMO_OPORTUNIDAD_UUID"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Consulta manual": {
+      "main": [
+        [
+          {
+            "node": "Clientes y oportunidades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clientes y oportunidades": {
+      "main": [
+        [
+          {
+            "node": "Oportunidad propuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Oportunidad propuesta": {
+      "main": [
+        [
+          {
+            "node": "Conversación propuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversación propuesta": {
+      "main": [
+        [
+          {
+            "node": "Verificar vacíos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar vacíos": {
+      "main": [
+        [
+          {
+            "node": "Crear cliente nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear cliente nuevo": {
+      "main": [
+        [
+          {
+            "node": "Releer antes de la oportunidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Releer antes de la oportunidad": {
+      "main": [
+        [
+          {
+            "node": "Verificar sin antecedentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sin antecedentes": {
+      "main": [
+        [
+          {
+            "node": "Crear oportunidad nueva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear oportunidad nueva": {
+      "main": [
+        [
+          {
+            "node": "Comprobar oportunidad creada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
