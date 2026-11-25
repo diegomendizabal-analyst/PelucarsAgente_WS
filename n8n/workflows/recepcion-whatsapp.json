@@ -32,7 +32,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (phoneId !== '1526007707255136') continue;\n  for (const message of event.messages ?? []) {\n    output.push({\n      json: { message_id: message.id, from: message.from, phone_number_id: phoneId, text: message.text?.body ?? null },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
+        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (phoneId !== 'META_PHONE_NUMBER_ID') continue;\n  for (const message of event.messages ?? []) {\n    output.push({\n      json: { message_id: message.id, from: message.from, phone_number_id: phoneId, text: message.text?.body ?? null },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
       }
     },
     {
@@ -46,7 +46,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (phoneId !== '1526007707255136') continue;\n  for (const update of event.statuses ?? []) {\n    output.push({\n      json: { message_id: update.id, phone_number_id: phoneId, status: update.status },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
+        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (phoneId !== 'META_PHONE_NUMBER_ID') continue;\n  for (const update of event.statuses ?? []) {\n    output.push({\n      json: { message_id: update.id, phone_number_id: phoneId, status: update.status },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
       }
     }
   ],

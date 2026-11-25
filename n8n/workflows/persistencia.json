@@ -23,7 +23,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return {json:{\"modo\":\"vista_previa\",\"conversation_id\":\"112d149e-8ef8-4234-bd62-d840ce8f4544\",\"provider\":\"pelucars-demo\",\"business_phone_id\":\"persistencia-manual\",\"provider_message_id\":\"persistencia-manual-20261125-001\",\"body\":\"Prueba manual de persistencia de Pelucars. Mensaje demo para verificar idempotencia.\"}};"
+        "jsCode": "return {json:{\"modo\":\"vista_previa\",\"conversation_id\":\"DEMO_CONVERSACION_UUID\",\"provider\":\"pelucars-demo\",\"business_phone_id\":\"persistencia-manual\",\"provider_message_id\":\"DEMO_ID_EXTERNO\",\"body\":\"Prueba manual de persistencia de Pelucars. Mensaje demo para verificar idempotencia.\"}};"
       }
     },
     {
@@ -39,7 +39,7 @@
         "method": "GET",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/",
         "options": {
           "response": {
             "response": {
@@ -86,7 +86,7 @@
         "method": "GET",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/leads",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/leads",
         "options": {
           "response": {
             "response": {
@@ -108,7 +108,7 @@
             },
             {
               "name": "customers.phone_e164",
-              "value": "eq.+12025550102"
+              "value": "eq.+DEMO_REMITENTE_META"
             },
             {
               "name": "closed_at",
@@ -120,11 +120,11 @@
             },
             {
               "name": "id",
-              "value": "eq.e2000004-0000-4000-8000-000000000004"
+              "value": "eq.DEMO_OPORTUNIDAD_UUID"
             },
             {
               "name": "customer_id",
-              "value": "eq.d2000000-0000-4000-8000-000000000002"
+              "value": "eq.DEMO_CLIENTE_UUID"
             }
           ]
         }
@@ -143,7 +143,7 @@
         "method": "GET",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
         "options": {
           "response": {
             "response": {
@@ -157,7 +157,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "112d149e-8ef8-4234-bd62-d840ce8f4544"
+              "value": "DEMO_CONVERSACION_UUID"
             }
           ]
         }
@@ -176,7 +176,7 @@
         "method": "GET",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/bot_message_history",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
         "options": {
           "response": {
             "response": {
@@ -190,7 +190,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "112d149e-8ef8-4234-bd62-d840ce8f4544"
+              "value": "DEMO_CONVERSACION_UUID"
             },
             {
               "name": "p_limit",
@@ -213,7 +213,7 @@
         "method": "GET",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/messages",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
         "options": {
           "response": {
             "response": {
@@ -239,7 +239,7 @@
             },
             {
               "name": "provider_message_id",
-              "value": "eq.persistencia-manual-20261125-001"
+              "value": "eq.DEMO_ID_EXTERNO"
             },
             {
               "name": "limit",
@@ -260,7 +260,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const plan = $('Datos de prueba').first().json;\nconst candidates = $('Seleccionar oportunidad demo').first().json.body;\nconst lead = candidates?.[0];\nif (candidates.length !== 1 || lead.source !== 'demo' || !lead.customers?.phone_e164) throw new Error('Oportunidad demo no disponible');\nconst state = $('Leer estado previo').first().json.body;\nconst history = $('Leer historial previo').first().json.body;\nconst key = $json.body;\nif(![state,history,key].every(Array.isArray)) throw new Error('Lectura inválida');\nif (lead.id !== 'e2000004-0000-4000-8000-000000000004' || lead.customers.id !== 'd2000000-0000-4000-8000-000000000002' || lead.customers.phone_e164 !== '+12025550102') throw new Error('La oportunidad demo cambió');\nif (state.length > 1 || key.length > 1) throw new Error('Resultado previo ambiguo');\nif (state.length || key.length || history.length) {\n  const own = state[0]?.lead_id === lead.id && state[0]?.bot_state === 'collecting' && state[0]?.reserved_slots === 0 && state[0]?.sent_count === 0 &&\n    key[0]?.conversation_id === plan.conversation_id && history.length === 1 &&\n    history[0].message_id === key[0].id && history[0].sender_kind === 'customer' && history[0].body === plan.body;\n  if (!own) throw new Error('Colisión con datos previos. Se detuvo antes de escribir.');\n}\nreturn {json:{...plan,lead_id:lead.id,referencia:lead.reference_number,estado_comercial:lead.commercial_status,source:lead.source,customer_id:lead.customers.id,phone_e164:lead.customers.phone_e164,rpc:$('Verificar contrato publicado').first().json.rpc,estado_previo:state,historial_previo:history.length,clave_previa:key}};"
+        "jsCode": "const plan = $('Datos de prueba').first().json;\nconst candidates = $('Seleccionar oportunidad demo').first().json.body;\nconst lead = candidates?.[0];\nif (candidates.length !== 1 || lead.source !== 'demo' || !lead.customers?.phone_e164) throw new Error('Oportunidad demo no disponible');\nconst state = $('Leer estado previo').first().json.body;\nconst history = $('Leer historial previo').first().json.body;\nconst key = $json.body;\nif(![state,history,key].every(Array.isArray)) throw new Error('Lectura inválida');\nif (lead.id !== 'DEMO_OPORTUNIDAD_UUID' || lead.customers.id !== 'DEMO_CLIENTE_UUID' || lead.customers.phone_e164 !== '+DEMO_REMITENTE_META') throw new Error('La oportunidad demo cambió');\nif (state.length > 1 || key.length > 1) throw new Error('Resultado previo ambiguo');\nif (state.length || key.length || history.length) {\n  const own = state[0]?.lead_id === lead.id && state[0]?.bot_state === 'collecting' && state[0]?.reserved_slots === 0 && state[0]?.sent_count === 0 &&\n    key[0]?.conversation_id === plan.conversation_id && history.length === 1 &&\n    history[0].message_id === key[0].id && history[0].sender_kind === 'customer' && history[0].body === plan.body;\n  if (!own) throw new Error('Colisión con datos previos. Se detuvo antes de escribir.');\n}\nreturn {json:{...plan,lead_id:lead.id,referencia:lead.reference_number,estado_comercial:lead.commercial_status,source:lead.source,customer_id:lead.customers.id,phone_e164:lead.customers.phone_e164,rpc:$('Verificar contrato publicado').first().json.rpc,estado_previo:state,historial_previo:history.length,clave_previa:key}};"
       }
     },
     {
@@ -307,7 +307,7 @@
       "parameters": {
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/receive_bot_message",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/receive_bot_message",
         "options": {
           "response": {
             "response": {
@@ -334,7 +334,7 @@
       "parameters": {
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/receive_bot_message",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/receive_bot_message",
         "options": {
           "response": {
             "response": {
@@ -375,7 +375,7 @@
       "parameters": {
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/bot_message_history",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
         "options": {
           "response": {
             "response": {
@@ -390,7 +390,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "112d149e-8ef8-4234-bd62-d840ce8f4544"
+              "value": "DEMO_CONVERSACION_UUID"
             }
           ]
         }
@@ -408,7 +408,7 @@
       "parameters": {
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
         "options": {
           "response": {
             "response": {
@@ -423,7 +423,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "112d149e-8ef8-4234-bd62-d840ce8f4544"
+              "value": "DEMO_CONVERSACION_UUID"
             }
           ]
         }

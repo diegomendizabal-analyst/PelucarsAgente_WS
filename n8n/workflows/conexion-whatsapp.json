@@ -24,7 +24,7 @@
       "parameters": {
         "resource": "message",
         "operation": "send",
-        "phoneNumberId": "1526007707255136",
+        "phoneNumberId": "META_PHONE_NUMBER_ID",
         "recipientPhoneNumber": "",
         "messageType": "text",
         "textBody": "Hola, esta es una prueba de conexión de Pelucars desde n8n."

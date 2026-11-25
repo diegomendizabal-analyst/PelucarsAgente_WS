@@ -22,7 +22,7 @@
         260
       ],
       "parameters": {
-        "jsCode": "return {json:{\"conversation_id\":\"5f367d80-3ec8-452b-ae62-40893763db19\",\"lead_id\":\"e2000004-0000-4000-8000-000000000004\",\"phone_e164\":\"+12025550102\",\"provider\":\"pelucars-demo\",\"business_phone_id\":\"contexto-comercial-manual\",\"entradas\":[{\"turno\":1,\"externo\":\"corolla-contexto-20261125-01\",\"mensaje\":\"Busco un Corolla automático. Tengo un presupuesto total de 20000 dólares.\"},{\"turno\":2,\"externo\":\"corolla-contexto-20261125-02\",\"mensaje\":\"Quiero comprar dentro de los próximos 15 días. No entrego usado ni necesito financiación.\"}]}};",
+        "jsCode": "return {json:{\"conversation_id\":\"DEMO_CONVERSACION_UUID\",\"lead_id\":\"DEMO_OPORTUNIDAD_UUID\",\"phone_e164\":\"+DEMO_REMITENTE_META\",\"provider\":\"pelucars-demo\",\"business_phone_id\":\"contexto-comercial-manual\",\"entradas\":[{\"turno\":1,\"externo\":\"DEMO_ID_EXTERNO_1\",\"mensaje\":\"Para esta prueba busco un Corolla automático por un total de 20.000 USD.\"},{\"turno\":2,\"externo\":\"DEMO_ID_EXTERNO_2\",\"mensaje\":\"Compraríamos dentro de 15 días, sin entregar usado y sin financiación.\"}]}};",
         "mode": "runOnceForEachItem"
       }
     },
@@ -38,7 +38,7 @@
       "parameters": {
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/bot_message_history",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
         "options": {
           "response": {
             "response": {
@@ -53,7 +53,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "5f367d80-3ec8-452b-ae62-40893763db19"
+              "value": "DEMO_CONVERSACION_UUID"
             },
             {
               "name": "p_limit",
@@ -117,7 +117,7 @@
       "parameters": {
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/receive_bot_message",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/receive_bot_message",
         "options": {
           "response": {
             "response": {
@@ -144,7 +144,7 @@
       "parameters": {
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/bot_message_history",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
         "options": {
           "response": {
             "response": {
@@ -175,7 +175,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "5f367d80-3ec8-452b-ae62-40893763db19"
+              "value": "DEMO_CONVERSACION_UUID"
             },
             {
               "name": "p_before",
@@ -252,7 +252,7 @@
       "parameters": {
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
         "options": {
           "response": {
             "response": {
@@ -267,7 +267,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "5f367d80-3ec8-452b-ae62-40893763db19"
+              "value": "DEMO_CONVERSACION_UUID"
             }
           ]
         }

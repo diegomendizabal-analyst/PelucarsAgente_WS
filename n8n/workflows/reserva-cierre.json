@@ -23,7 +23,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return {json:{\"modo\":\"vista_previa\",\"args\":{\"p_conversation_id\":\"5f367d80-3ec8-452b-ae62-40893763db19\",\"p_reply_to\":\"88e3783c-6b04-47fd-a29b-64717a77aba4\",\"p_body\":\"Gracias por la información. Un asesor de Pelucars va a contactarte para continuar con tu búsqueda.\",\"p_reply_kind\":\"closing\",\"p_expected_reserved_slots\":0},\"lead_id\":\"e2000004-0000-4000-8000-000000000004\",\"historial\":[{\"message_id\":\"ff3e7e86-7a69-4161-9f41-0037004a12c8\",\"history_position\":3,\"body\":\"Busco un Corolla automático. Tengo un presupuesto total de 20000 dólares.\"},{\"message_id\":\"88e3783c-6b04-47fd-a29b-64717a77aba4\",\"history_position\":4,\"body\":\"Quiero comprar dentro de los próximos 15 días. No entrego usado ni necesito financiación.\"}]}};"
+        "jsCode": "return {json:{\"modo\":\"vista_previa\",\"args\":{\"p_conversation_id\":\"DEMO_CONVERSACION_UUID\",\"p_reply_to\":\"DEMO_SEGUNDO_MENSAJE_UUID\",\"p_body\":\"DEMO_TEXTO_CIERRE\",\"p_reply_kind\":\"closing\",\"p_expected_reserved_slots\":0},\"lead_id\":\"DEMO_OPORTUNIDAD_UUID\",\"historial\":[{\"message_id\":\"DEMO_PRIMER_MENSAJE_UUID\",\"history_position\":null,\"body\":\"DEMO_TEXTO_PRIMERO\"},{\"message_id\":\"DEMO_SEGUNDO_MENSAJE_UUID\",\"history_position\":null,\"body\":\"DEMO_TEXTO_SEGUNDO\"}]}};"
       }
     },
     {
@@ -36,7 +36,7 @@
         300
       ],
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -53,7 +53,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "5f367d80-3ec8-452b-ae62-40893763db19"
+              "value": "DEMO_CONVERSACION_UUID"
             }
           ]
         }
@@ -69,7 +69,7 @@
         300
       ],
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/bot_message_history",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -86,7 +86,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "5f367d80-3ec8-452b-ae62-40893763db19"
+              "value": "DEMO_CONVERSACION_UUID"
             },
             {
               "name": "p_limit",
@@ -106,7 +106,7 @@
         300
       ],
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/messages",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -123,11 +123,11 @@
           "parameters": [
             {
               "name": "conversation_id",
-              "value": "eq.5f367d80-3ec8-452b-ae62-40893763db19"
+              "value": "eq.DEMO_CONVERSACION_UUID"
             },
             {
               "name": "reply_to",
-              "value": "eq.88e3783c-6b04-47fd-a29b-64717a77aba4"
+              "value": "eq.DEMO_SEGUNDO_MENSAJE_UUID"
             },
             {
               "name": "select",
@@ -197,7 +197,7 @@
         300
       ],
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/reserve_bot_reply",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/reserve_bot_reply",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -238,7 +238,7 @@
         300
       ],
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/reserve_bot_reply",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/reserve_bot_reply",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -279,7 +279,7 @@
         300
       ],
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -296,7 +296,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "5f367d80-3ec8-452b-ae62-40893763db19"
+              "value": "DEMO_CONVERSACION_UUID"
             }
           ]
         }
@@ -312,7 +312,7 @@
         300
       ],
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/bot_message_history",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -329,7 +329,7 @@
           "parameters": [
             {
               "name": "p_conversation_id",
-              "value": "5f367d80-3ec8-452b-ae62-40893763db19"
+              "value": "DEMO_CONVERSACION_UUID"
             },
             {
               "name": "p_limit",
@@ -349,7 +349,7 @@
         300
       ],
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/messages",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -366,11 +366,11 @@
           "parameters": [
             {
               "name": "conversation_id",
-              "value": "eq.5f367d80-3ec8-452b-ae62-40893763db19"
+              "value": "eq.DEMO_CONVERSACION_UUID"
             },
             {
               "name": "reply_to",
-              "value": "eq.88e3783c-6b04-47fd-a29b-64717a77aba4"
+              "value": "eq.DEMO_SEGUNDO_MENSAJE_UUID"
             },
             {
               "name": "select",

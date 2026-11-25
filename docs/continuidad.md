@@ -52,4 +52,17 @@ Widget implementado con DolarAPI oficial y calculadora informativa ARS ↔ USD a
 
 ## Para retomar
 
+### WhatsApp · Punto de partida para el 26 de noviembre de 2026
+
+- La recepción real quedó confirmada después de suscribir la app a la cuenta de WhatsApp de prueba (#26–#27). En Supabase se comprobaron el ingreso sin duplicados, el historial, el contexto entre turnos y las reservas idempotentes (#19–#21).
+- **OP-000060 está pausada.** La lectura #36 confirmó dos entradas del cliente, dos cupos reservados, cero envíos confirmados y estado `collecting`. El procesamiento volvió a quedar deshabilitado. Los workflows siguen sin publicar.
+- **#34, cupo 1.** El nodo HTTP informó `invalid syntax` al construir la solicitud. La reserva quedó `unknown`, sin ID de Meta. Revisar cómo distinguir un error local previo al transporte de una respuesta incierta. El cuerpo se corrigió para el siguiente turno.
+- **#35, cupo 2.** El nuevo intento fue rechazado por Meta con HTTP 403 y código 131005. La reserva quedó `failed`, sin ID de salida. En #37 figuraban concedidos los permisos de gestión y mensajería. La causa específica del rechazo sigue pendiente.
+- **Primera comprobación de mañana.** Probar una sola vez el envío aislado que funcionó en #23 al destinatario autorizado, fuera de OP-000060. Comparar con el HTTP integrado la credencial y app, el Phone Number ID, el formato del destinatario, la versión de Graph, el cuerpo y el resultado de Meta. Registrar el ID de salida o el error sin exponer el token.
+- Conservar la conversación, los mensajes y ambos cupos. No reenviar automáticamente las reservas anteriores. Quedan pendientes el guardado del resumen, score y evidencias.
+
+[Inventario de workflows y resultados](../n8n/workflows/README.md)
+
+### Reportes y CRM
+
 > Leer continuidad, reportes, demo-temporal, decisiones y modelo vigente. Revisar Git conservando cambios locales. SQL de Reportes/rangos/separación está aplicado; frontend local y muestras cargadas. Ventas/score sólo tienen interfaz y actividades son posteriores. No resetear seed ni alterar cuentas. Demo activa muestra muestras; apagar muestra vacío. Su retiro definitivo requiere purga revisada, no solamente apagar el flag.

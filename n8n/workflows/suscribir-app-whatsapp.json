@@ -1,0 +1,170 @@
+{
+  "name": "Pelucars — Suscribir app de prueba a WhatsApp",
+  "nodes": [
+    {
+      "id": "b19a8506-e5fa-4499-abee-27f6d7cc94f4",
+      "name": "Inicio manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "9cc51733-539c-45c7-9bef-2cc449e19b6e",
+      "name": "Aplicación del token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        250,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.facebook.com/v25.0/app?fields=id,name",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "e9a5cf99-1cf1-43b4-af0f-8a02fe93553a",
+      "name": "Validar App ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const result = $input.first().json;\nif (result.statusCode !== 200 || result.body?.id !== 'META_APP_ID') {\n  throw new Error('Meta no confirmó el App ID esperado para esta credencial. Se detuvo la suscripción.');\n}\nreturn [{json: {app_id: result.body.id}}];"
+      }
+    },
+    {
+      "id": "c9c2ae57-b438-4954-acef-9084c7b4ff80",
+      "name": "Suscribir aplicación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        750,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v25.0/META_WABA_ID/subscribed_apps",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "5fccf879-7738-4927-8a2d-adbd1ccad023",
+      "name": "Leer suscripciones finales",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1000,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.facebook.com/v25.0/META_WABA_ID/subscribed_apps?limit=100",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Inicio manual": {
+      "main": [
+        [
+          {
+            "node": "Aplicación del token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicación del token": {
+      "main": [
+        [
+          {
+            "node": "Validar App ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar App ID": {
+      "main": [
+        [
+          {
+            "node": "Suscribir aplicación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suscribir aplicación": {
+      "main": [
+        [
+          {
+            "node": "Leer suscripciones finales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

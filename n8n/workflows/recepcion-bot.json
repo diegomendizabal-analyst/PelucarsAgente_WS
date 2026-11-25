@@ -20,7 +20,7 @@
               "id": "a1",
               "name": "mensaje",
               "type": "string",
-              "value": "Me corrijo: no quiero reservar ni coordinar una visita por ahora. Solo estoy averiguando y todavía no tengo fecha de compra."
+              "value": "Estoy consultando opciones y aún no decidí cuándo comprar."
             },
             {
               "id": "a2",
@@ -32,19 +32,19 @@
               "id": "demo-conversation_id",
               "name": "conversation_id",
               "type": "string",
-              "value": "6a2ca1f8-8241-4bd3-ac71-73ce74af8a35"
+              "value": "DEMO_CONVERSACION_UUID"
             },
             {
               "id": "demo-lead_id",
               "name": "lead_id",
               "type": "string",
-              "value": "e2000001-0000-4000-8000-000000000001"
+              "value": "DEMO_OPORTUNIDAD_UUID"
             },
             {
               "id": "demo-phone_e164",
               "name": "phone_e164",
               "type": "string",
-              "value": "+12025550101"
+              "value": "+DEMO_REMITENTE_META"
             },
             {
               "id": "demo-provider",
@@ -62,7 +62,7 @@
               "id": "demo-provider_message_id",
               "name": "provider_message_id",
               "type": "string",
-              "value": "prueba-recepcion-001"
+              "value": "DEMO_ID_EXTERNO"
             }
           ]
         },
@@ -204,7 +204,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/receive_bot_message",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/receive_bot_message",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -230,7 +230,7 @@
     },
     {
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/bot_message_history",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendQuery": true,
@@ -298,7 +298,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -324,7 +324,7 @@
     },
     {
       "parameters": {
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/messages",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendQuery": true,
@@ -402,7 +402,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://pkyinqzvmmciqlvfwtxl.supabase.co/rest/v1/rpc/reserve_bot_reply",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/reserve_bot_reply",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
