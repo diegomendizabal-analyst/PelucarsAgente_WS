@@ -1,5 +1,9 @@
 # Continuidad — Reportes, 24/11/2026
 
+## Recepción del bot — 25/11/2026
+
+Primera etapa implementada en rama desde `main` en `f371714`. Conversaciones y mensajes sobre oportunidades explícitas, ingreso idempotente, historial, cupos y confirmación de salientes, con permisos heredados del CRM. Migración verificada exclusivamente en PostgreSQL local. Ver [contrato para n8n, pruebas y pendientes](bot-conversaciones.md). D07 y el reparto de clientes nuevos siguen pendientes. Score y evidencias corresponden a la etapa siguiente.
+
 ## Estado de partida y alcance vigente
 
 Rama de trabajo: `reportes-primer-incremento`, creada desde `origin/main` en `fa4be36` (PR1–PR5 integrados). Se conservaron los cambios locales al continuar. El usuario autorizó abrir una PR para revisión en GitHub y pruebas en otro chat; esta entrega se prepara como borrador, sin merge ni despliegue del frontend. Instrucciones reproducibles: [guía de revisión](revision-reportes.md).
