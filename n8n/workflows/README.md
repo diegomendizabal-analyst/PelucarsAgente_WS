@@ -11,6 +11,7 @@ Los flujos se mantienen en n8n. En este informe anotamos qué se probó y qué r
 5. **Envío por WhatsApp (#22 y #23).** Meta rechazó el primer intento por destinatario no autorizado. Con el número corregido, Meta aceptó el texto y Augusto confirmó que llegó a su celular.
 6. **Recepción por WhatsApp (#24).** El evento simulado llegó al trigger con el Phone Number ID de ejemplo `123456123`. El flujo filtra por el número de prueba `1526007707255136`. Augusto confirmó que el campo `messages` figura suscrito y que su mensaje real no llegó durante una nueva escucha.
 7. **Suscripción de WhatsApp (#25).** Meta confirmó que la cuenta `1171044792167045` contiene el número de prueba `1526007707255136` y que la app **Pelucars - Desarrollo** tiene el ID `1135214522724943`. La consulta de aplicaciones suscritas devolvió únicamente **WA DevX Webhook Events 1P App** (`2202427980234937`). Pelucars - Desarrollo no figuraba. Las tres consultas devolvieron HTTP 200 y fueron de solo lectura.
+8. **Suscripción de Pelucars (#26).** Meta identificó el token con la app **Pelucars - Desarrollo** (`1135214522724943`). Un único POST suscribió la app a la cuenta `1171044792167045`. El GET posterior mostró tanto **Pelucars - Desarrollo** como **WA DevX Webhook Events 1P App** (`2202427980234937`). El callback se conservó. Queda pendiente probar la recepción desde el celular.
 
 <details>
 <summary>Copias iniciales e instrucciones de importación</summary>
