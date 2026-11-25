@@ -28,6 +28,7 @@ create table public.messages (
   history_position bigint unique,
   send_state text,
   bot_slot smallint check (bot_slot between 1 and 3),
+  reply_kind text check (reply_kind in ('question','closing')),
   reply_to uuid,
   foreign key (conversation_id, provider, business_phone_id)
     references public.conversations(id, provider, business_phone_id),
@@ -38,9 +39,10 @@ create table public.messages (
   unique (provider, business_phone_id, provider_message_id),
   check (
     (sender_kind = 'customer' and provider_message_id is not null and history_position is not null
-      and send_state is null and sent_at is null and bot_slot is null and reply_to is null)
+      and send_state is null and sent_at is null and bot_slot is null and reply_to is null and reply_kind is null)
     or
     (sender_kind = 'bot' and send_state is not null and bot_slot is not null and reply_to is not null
+      and reply_kind is not null and (bot_slot < 3 or reply_kind = 'closing')
       and send_state in ('pending','sending','sent','failed','unknown')
       and (send_state = 'sent') = (sent_at is not null)
       and (send_state = 'sent') = (history_position is not null)
@@ -128,27 +130,44 @@ language sql stable security invoker set search_path = '' as $$
   where c.id = p_conversation_id group by c.id;
 $$;
 
-create function public.reserve_bot_reply(p_conversation_id uuid, p_reply_to uuid, p_body text)
+create function public.reserve_bot_reply(p_conversation_id uuid, p_reply_to uuid, p_body text,
+  p_reply_kind text, p_expected_reserved_slots integer)
 returns public.messages language plpgsql security invoker set search_path = '' as $$
 declare
   conversation public.conversations;
   message public.messages;
-  next_slot integer;
+  reserved_slots integer;
 begin
   select * into strict conversation from public.conversations where id = p_conversation_id for update;
   perform 1 from public.messages where conversation_id = conversation.id and id = p_reply_to and sender_kind = 'customer';
   if not found then raise exception 'Expected inbound message in conversation' using errcode = '22023'; end if;
   select * into message from public.messages where reply_to = p_reply_to;
   if found then
-    if message.body is distinct from p_body then raise exception 'Reply content conflict' using errcode = '22023'; end if;
+    if (message.body, message.reply_kind) is distinct from (p_body, p_reply_kind) then
+      raise exception 'Reply content or kind conflict' using errcode = '22023';
+    end if;
     return message;
   end if;
-  if conversation.bot_state <> 'collecting' then raise exception 'Bot is not collecting' using errcode = '22023'; end if;
-  select coalesce(max(bot_slot), 0) + 1 into next_slot from public.messages where conversation_id = conversation.id;
-  if next_slot > 3 then raise exception 'Reply limit reached' using errcode = '22023'; end if;
-  insert into public.messages(conversation_id, provider, business_phone_id, sender_kind, body, send_state, bot_slot, reply_to)
-    values (conversation.id, conversation.provider, conversation.business_phone_id, 'bot', p_body, 'pending', next_slot, p_reply_to)
+  if p_expected_reserved_slots is null or p_expected_reserved_slots not between 0 and 3
+     or p_reply_kind is null or p_reply_kind not in ('question','closing') then
+    raise exception 'Invalid decision parameters' using errcode = '22023';
+  end if;
+  select count(bot_slot) into reserved_slots from public.messages
+    where conversation_id = conversation.id and bot_slot is not null;
+  if reserved_slots <> p_expected_reserved_slots or conversation.bot_state <> 'collecting' then
+    raise exception 'Refresh conversation before deciding' using errcode = 'PT409';
+  end if;
+  if reserved_slots = 3 or (reserved_slots = 2 and p_reply_kind <> 'closing') then
+    raise exception 'Third slot requires closing; maximum three slots' using errcode = '22023';
+  end if;
+  insert into public.messages(conversation_id, provider, business_phone_id, sender_kind, body,
+                              send_state, bot_slot, reply_to, reply_kind)
+    values (conversation.id, conversation.provider, conversation.business_phone_id, 'bot', p_body,
+            'pending', reserved_slots + 1, p_reply_to, p_reply_kind)
     returning * into message;
+  if p_reply_kind = 'closing' then
+    update public.conversations set bot_state = 'waiting_assignment' where id = conversation.id;
+  end if;
   return message;
 end $$;
 
@@ -163,7 +182,8 @@ begin
   select bot_state into strict conversation_state from public.conversations where id = p_conversation_id for update;
   select * into strict message from public.messages where conversation_id = p_conversation_id
     and id = p_message_id and sender_kind = 'bot' for update;
-  if message.send_state <> 'pending' or conversation_state in ('handed_off','stopped') then
+  if message.send_state <> 'pending' or conversation_state in ('handed_off','stopped')
+     or (conversation_state = 'waiting_assignment' and message.reply_kind = 'question') then
     return query select message.id, message.send_state, false;
     return;
   end if;
@@ -211,12 +231,12 @@ begin
 end $$;
 
 revoke all on function public.receive_bot_message(uuid,uuid,text,text,text,text,text,text),
-  public.reserve_bot_reply(uuid,uuid,text), public.claim_bot_reply(uuid,uuid), public.record_bot_reply_result(uuid,uuid,text,text),
+  public.reserve_bot_reply(uuid,uuid,text,text,integer), public.claim_bot_reply(uuid,uuid), public.record_bot_reply_result(uuid,uuid,text,text),
   public.set_bot_conversation_state(uuid,text,text), public.bot_message_history(uuid,bigint,bigint,integer)
   from public, anon, authenticated;
 revoke all on function public.get_bot_conversation(uuid) from public, anon, authenticated;
 grant execute on function public.receive_bot_message(uuid,uuid,text,text,text,text,text,text),
-  public.reserve_bot_reply(uuid,uuid,text), public.claim_bot_reply(uuid,uuid), public.record_bot_reply_result(uuid,uuid,text,text),
+  public.reserve_bot_reply(uuid,uuid,text,text,integer), public.claim_bot_reply(uuid,uuid), public.record_bot_reply_result(uuid,uuid,text,text),
   public.set_bot_conversation_state(uuid,text,text) to service_role;
 grant execute on function public.bot_message_history(uuid,bigint,bigint,integer), public.get_bot_conversation(uuid) to authenticated, service_role;
 
