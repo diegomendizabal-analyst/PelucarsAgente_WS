@@ -603,7 +603,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const r=$json.body?.[0];\nif ($json.body?.length!==1 || r?.message_id!==$('Respuesta persistida').item.json.id || typeof r.claimed!=='boolean' || (r.claimed && r.send_state!=='sending')) throw new Error('Toma no verificable');\nreturn {json:{claimed:r.claimed}};"
+        "jsCode": "const r=$json.body?.[0];\nif ($json.body?.length!==1 || r?.message_id!==$('Respuesta persistida').item.json.id || typeof r.claimed!=='boolean' || (r.claimed && r.send_state!=='sending')) throw new Error('Toma no verificable');\nif (!r.claimed) return {json:{claimed:false}};\nconst waRequest = {messaging_product:'whatsapp', to:'DEMO_DESTINATARIO_META', type:'text', text:{body:$('Respuesta persistida').item.json.body}};\nreturn {json:{claimed:true,waRequest}};"
       }
     },
     {
@@ -670,7 +670,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {messaging_product:'whatsapp',to:'DEMO_DESTINATARIO_META',type:'text',text:{body:$('Respuesta persistida').item.json.body}} }}"
+        "jsonBody": "={{ $json.waRequest }}"
       },
       "onError": "continueRegularOutput",
       "retryOnFail": false
