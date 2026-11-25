@@ -2,7 +2,7 @@
 
 ## Recepción del bot — 25/11/2026
 
-Primera etapa implementada en rama desde `main` en `f371714`. Conversaciones y mensajes sobre oportunidades explícitas, ingreso idempotente, historial, cupos y confirmación de salientes, con permisos heredados del CRM. Migración verificada exclusivamente en PostgreSQL local. Ver [contrato para n8n, pruebas y pendientes](bot-conversaciones.md). D07 y el reparto de clientes nuevos siguen pendientes. Score y evidencias corresponden a la etapa siguiente.
+Primera etapa implementada en rama desde `main` en `f371714`. Conversaciones y mensajes sobre oportunidades explícitas, ingreso idempotente, historial, cupos y confirmación de salientes, con permisos heredados del CRM. Las pruebas de concurrencia y permisos pasaron en PostgreSQL local. La migración revisada ya está aplicada y registrada en desarrollo. Ver [contrato para n8n, pruebas y pendientes](bot-conversaciones.md). D07 y el reparto de clientes nuevos siguen pendientes. Score y evidencias corresponden a la etapa siguiente.
 
 ## Estado de partida y alcance vigente
 
