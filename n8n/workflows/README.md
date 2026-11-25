@@ -1,6 +1,20 @@
-# Workflows de Pelucars en n8n
+# Pruebas del bot de Pelucars
 
-Copias importables de los seis borradores del 25 de noviembre de 2026. La instancia de n8n guarda el trabajo en curso. Estas copias se actualizan por commit cuando cambia un flujo.
+Los flujos se mantienen en n8n. En este informe anotamos qué se probó y qué resultado se obtuvo.
+
+## 25 de noviembre de 2026
+
+1. **Recepción del bot.** Se preparó el flujo de prueba que lee el historial, analiza la consulta y decide si corresponde reservar una respuesta. Las etapas se probaron por separado con datos demo.
+2. **Persistencia (#19).** Se registró dos veces el mismo mensaje de OP-000030. El primer ingreso lo creó y el segundo recuperó el mismo registro. Quedó un solo mensaje en el historial, con cero reservas y cero envíos.
+3. **Contexto comercial (#20).** Después de dos mensajes, el bot conservó el Corolla automático y el presupuesto total de USD 20.000. Incorporó el plazo de 15 días, que el cliente no entrega usado y que no necesita financiación.
+4. **Reserva de cierre (#21).** Se pidió dos veces la misma reserva. Ambas llamadas devolvieron el mismo cierre pendiente en el cupo 1. La conversación quedó esperando asignación, con una reserva y cero envíos. El historial siguió mostrando solo los dos mensajes del cliente.
+5. **Envío por WhatsApp (#22 y #23).** Meta rechazó el primer intento por destinatario no autorizado. Con el número corregido, Meta aceptó el texto y Augusto confirmó que llegó a su celular.
+6. **Recepción por WhatsApp (#24).** El evento simulado llegó al trigger con el Phone Number ID de ejemplo `123456123`. El flujo filtra por el número de prueba `1526007707255136`. Augusto confirmó que el campo `messages` figura suscrito y que su mensaje real no llegó durante una nueva escucha. Queda por verificar si la cuenta de WhatsApp Business del número de prueba está suscrita a la app **Pelucars - Desarrollo**.
+
+<details>
+<summary>Copias iniciales e instrucciones de importación</summary>
+
+Copias importables de los seis borradores del 25 de noviembre de 2026. La instancia de n8n guarda el trabajo en curso. Corresponden a la versión guardada en esa fecha.
 
 | Archivo | Uso |
 | --- | --- |
@@ -18,3 +32,5 @@ Importá el JSON como workflow nuevo. Las copias están inactivas y omiten vínc
 Las pruebas de persistencia, contexto, reserva y recepción del bot conservan la URL del proyecto Supabase y sus referencias demo. Verificá el entorno y los registros antes de ejecutar. Según el flujo, necesitan credenciales Supabase API y del modelo del extractor.
 
 Para recibir WhatsApp, vinculá en el trigger la credencial WhatsApp OAuth de la app de Meta. Comprobá primero en la app si el objeto WhatsApp Business Account ya tiene una URL de callback y si está suscrito a `messages`. La escucha de prueba también usa el webhook de la app. El flujo filtra por Phone Number ID `1526007707255136`. La rama de mensajes muestra ID, remitente, Phone Number ID y texto. La rama de estados muestra el ID del mensaje, el Phone Number ID y el estado informado por Meta.
+
+</details>
