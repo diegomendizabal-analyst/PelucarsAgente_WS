@@ -1,18 +1,31 @@
 # Workflows de prueba de Pelucars
 
-Actualizado el 26 de noviembre de 2026. Los flujos se conservan en n8n sin publicar. Los números con almohadilla identifican ejecuciones ya realizadas.
+## Recepción de WhatsApp y persistencia
 
-| Workflow | Propósito y resultado observado | Pendiente |
-| --- | --- | --- |
-| [Pelucars — Prueba de recepción](recepcion-bot.json) | Prepara contexto, extrae datos y decide si reservar una pregunta o el cierre. Las etapas se comprobaron en las pruebas separadas de contexto y reserva. | Persistir resumen, score y evidencias. |
-| [Pelucars — Prueba manual de persistencia](persistencia.json) | Registró dos veces la misma entrada. La segunda devolvió el mismo mensaje con `created=false`. El historial conservó una entrada (#19). | Ninguno para esta prueba. |
-| [Pelucars — Prueba de contexto comercial](contexto-comercial.json) | El segundo turno conservó vehículo y presupuesto e incorporó plazo, usado y financiación (#20). | Persistencia de los resultados de extracción. |
-| [Pelucars — Prueba de reserva de cierre](reserva-cierre.json) | Dos llamadas devolvieron el mismo cierre. Quedó pendiente en un único cupo, con cero envíos (#21). | Ninguno para la reserva idempotente. |
-| [Pelucars — Prueba de conexión WhatsApp](conexion-whatsapp.json) | El nodo WhatsApp Business Cloud entregó el texto en #23 y, con la credencial actualizada, en #41. El destinatario confirmó ambas llegadas. En #38 Meta había rechazado el token con 401 / 190. | Control aislado completado. |
-| [Pelucars — Verificar suscripción de WhatsApp](verificar-suscripcion-whatsapp.json) | Detectó la suscripción faltante en #25 y el token vencido en #39 (190/463). En #40 las cuatro consultas devolvieron 200. Se verificaron la app asociada al token, el número en la cuenta, la suscripción y los permisos de gestión y mensajería. | Diagnóstico de lectura completado. |
-| [Pelucars — Suscribir app de prueba a WhatsApp](suscribir-app-whatsapp.json) | Verificó la app del token, la suscribió a la cuenta de prueba y comprobó que la suscripción anterior se conservó (#26). | Suscripción ya realizada. |
-| [Pelucars — Recepción WhatsApp de prueba](recepcion-whatsapp.json) | En #46 guardó «No entrego usado», reservó el cierre en el cupo 3 y lo tomó y envió una sola vez. Se registró el ID de Meta y el destinatario confirmó la llegada. | En #49 el mismo nodo de guardado, en una prueba manual aislada con los datos de #46, devolvió `unchanged` y conservó `updated_at`. Las dos lecturas confirmaron tres cupos reservados y un envío. Procesamiento deshabilitado. Sigue pendiente revisar la clasificación histórica de #34. |
-| [Pelucars — Revisión de remitente demo](revision-remitente-demo.json) | Verificó el remitente antes del alta. La lectura #47 confirmó `waiting_assignment`, tres cupos reservados, un envío y cuatro mensajes visibles en el historial. | Conservar las tres reservas y sus estados. |
-| [Pelucars — Alta de prueba autorizada](alta-demo.json) | Creó el cliente y OP-000060 después de repetir las comprobaciones. La oportunidad quedó sin vendedor, asignaciones ni avisos (#33). | Alta completada. Conservar OP-000060 en pausa. |
+El [workflow de recepción](recepcion-whatsapp.json) está sin publicar y tiene el procesamiento deshabilitado. Cuando se habilita para una prueba, acepta texto libre del remitente autorizado que llega al número de prueba. Requiere texto no vacío e identificador del proveedor. Guarda el cuerpo original en la oportunidad demo configurada. Los avisos de entrega y lectura siguen una rama separada.
 
-Los JSON contienen el diseño para importar. Vinculá las credenciales en n8n y sustituí `proyecto-demo.supabase.co` y los marcadores `META_…` y `DEMO_…` por valores del entorno autorizado. La prueba de reserva requiere completar en «Parámetros acordados» los dos textos, sus posiciones reales, los identificadores y el cierre acordado. La prueba de conexión deja vacío el destinatario. Conservá el único WhatsApp Trigger de la aplicación.
+1. **Recepción.** El trigger recibió la consulta comercial. La primera ejecución se detuvo antes del guardado porque faltaba el punto final que exigía el filtro de prueba. Antes de retomar el evento se verificó que la oportunidad seguía sin conversación, mensajes ni resumen y que el mensaje externo aún no estaba registrado.
+2. **Persistencia y extracción.** El evento guardado se procesó una vez con su identidad y texto originales. El ingreso devolvió `created=true`. El extractor identificó Corolla automático modelo 2022 en adelante, presupuesto total de USD 20.000, compra dentro de 15 días, sin entrega de usado ni financiación. El guardado del resumen devolvió `applied` y lo vinculó al mensaje entrante.
+3. **Cierre.** Con los datos completos y cero cupos usados, el bot reservó el cierre en el primer cupo. Lo tomó una vez, Meta aceptó un único envío y el destinatario confirmó la llegada. Una lectura posterior verificó `waiting_assignment`, `reserved_slots=1`, `sent_count=1` y dos mensajes en orden: la consulta y el cierre. El resumen coincidía con la extracción y el identificador del envío guardado coincidía con el devuelto por Meta. La oportunidad quedó sin vendedor ni notificaciones.
+
+Después de la prueba se retiró la comparación del texto comercial para las próximas entradas. Se comprobaron los filtros con datos sintéticos. La deduplicación conserva la clave formada por proveedor, número comercial e identificador externo del mensaje. La prueba de persistencia verificó por separado que repetir el ingreso devuelve el mismo registro con `created=false`.
+
+## Otras comprobaciones
+
+| Workflow | Resultado |
+| --- | --- |
+| [Prueba de recepción](recepcion-bot.json) | Prepara el contexto, extrae los datos y propone una pregunta o un cierre según los cupos reservados. |
+| [Persistencia](persistencia.json) | Dos ingresos idénticos dejaron una sola entrada en el historial. |
+| [Contexto comercial](contexto-comercial.json) | El segundo turno conservó vehículo y presupuesto e incorporó plazo, usado y financiación. |
+| [Reserva de cierre](reserva-cierre.json) | Repetir la reserva devolvió el mismo cierre. Quedó pendiente en un cupo, con cero envíos. |
+| [Conexión WhatsApp](conexion-whatsapp.json) | El destinatario confirmó el envío aislado. Otro control detectó la caducidad del token y el envío volvió a funcionar tras actualizarlo. |
+| [Verificar suscripción](verificar-suscripcion-whatsapp.json) | Las lecturas confirmaron la aplicación, el número de prueba, la suscripción a la cuenta y los permisos de gestión y mensajería. |
+| [Suscribir aplicación](suscribir-app-whatsapp.json) | Se comprobó la identidad de la aplicación y se conservó la suscripción existente al agregar la de prueba. |
+| [Revisión del remitente](revision-remitente-demo.json) | En la demo anterior se verificaron tres cupos reservados, un envío y cuatro mensajes visibles en el historial. El reintento aislado del guardado de resumen devolvió `unchanged` y conservó `updated_at`. |
+| [Alta demo](alta-demo.json) | Se comprobaron las condiciones antes del alta. El cliente y la oportunidad de prueba quedaron sin asignación ni avisos. |
+
+Quedan pendientes la persistencia del score y sus evidencias, y la clasificación de un error local previo a un envío en la demo anterior.
+
+## Uso de la exportación
+
+La plantilla de recepción usa identificadores sintéticos para los nodos y grupos del diagrama. Para importarla, vinculá las credenciales desde n8n y sustituí `proyecto-demo.supabase.co` y los marcadores `META_…` y `DEMO_…` por los valores del entorno autorizado. En la rama de estados usá el destinatario sin el signo más, tal como lo informa Meta. Conservá el único WhatsApp Trigger de la aplicación. La prueba aislada de reserva requiere los textos y posiciones reales del caso reservado. La de conexión deja el destinatario vacío.
