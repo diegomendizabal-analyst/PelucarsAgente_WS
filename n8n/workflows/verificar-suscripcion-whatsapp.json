@@ -83,7 +83,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "https://graph.facebook.com/v25.0/META_APP_ID?fields=id,name",
+        "url": "https://graph.facebook.com/v25.0/app?fields=id,name",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "whatsAppApi",
         "options": {

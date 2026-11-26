@@ -584,7 +584,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const r=$json.body?.[0];\nif ($json.body?.length!==1 || r?.message_id!==$('Respuesta persistida').item.json.id || typeof r.claimed!=='boolean' || (r.claimed && r.send_state!=='sending')) throw new Error('Toma no verificable');\nif (!r.claimed) return {json:{claimed:false}};\nconst waRequest = {messaging_product:'whatsapp', to:'DEMO_DESTINATARIO_META', type:'text', text:{body:$('Respuesta persistida').item.json.body}};\nreturn {json:{claimed:true,waRequest}};"
+        "jsCode": "const r=$json.body?.[0];\nif ($json.body?.length!==1 || r?.message_id!==$('Respuesta persistida').item.json.id || typeof r.claimed!=='boolean' || (r.claimed && r.send_state!=='sending')) throw new Error('Toma no verificable');\nreturn {json:{claimed:r.claimed}};"
       },
       "id": "41d5bcd8-029a-49fc-a6f1-c88114100a71",
       "name": "Comprobar toma",
@@ -630,44 +630,28 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://graph.facebook.com/v25.0/META_PHONE_NUMBER_ID/messages",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "whatsAppApi",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ $json.waRequest }}",
-        "options": {
-          "redirect": {
-            "redirect": {
-              "followRedirects": false
-            }
-          },
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "neverError": true,
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 20000
-        }
+        "resource": "message",
+        "operation": "send",
+        "phoneNumberId": "META_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "DEMO_DESTINATARIO_META",
+        "messageType": "text",
+        "textBody": "={{ $('Respuesta persistida').item.json.body }}"
       },
       "id": "14cb83f2-5885-4988-bb78-1b6b29e8bc92",
       "name": "Enviar texto por WhatsApp",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
       "position": [
         5248,
         -144
       ],
       "retryOnFail": false,
-      "onError": "continueRegularOutput"
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const {statusCode,body}=$json;\nconst id=body?.messages?.[0]?.id;\nconst accepted=statusCode>=200 && statusCode<300 && typeof id==='string' && id.startsWith('wamid.') && body.messages.length===1;\nconst rejected=[400,401,403,404].includes(statusCode) && typeof body?.error?.code==='number' && body.error.is_transient!==true;\nconst result={p_conversation_id:\"DEMO_CONVERSACION_UUID\",p_message_id:$('Respuesta persistida').item.json.id,p_state:accepted?'sent':rejected?'failed':'unknown'};\nif (accepted) result.p_provider_message_id=id;\nreturn {json:result};"
+        "jsCode": "const reply = $('Respuesta persistida').item.json;\nconst messages = $json.messages;\nconst id = Array.isArray(messages) && messages.length === 1 ? messages[0]?.id : null;\nconst error = $json.error;\nconst response = error?.errorResponse ?? error?.response;\nconst graphError = response?.body?.error ?? response?.data?.error;\nconst status = Number(error?.httpCode ?? response?.statusCode ?? response?.status);\nconst accepted = !error && $json.messaging_product === 'whatsapp'\n  && typeof id === 'string' && /^wamid\\.\\S+$/.test(id);\nconst rejected = [400, 401, 403, 404].includes(status)\n  && Number.isInteger(graphError?.code) && graphError.is_transient !== true;\nconst result = {\n  p_conversation_id: reply.conversation_id,\n  p_message_id: reply.id,\n  p_state: accepted ? 'sent' : rejected ? 'failed' : 'unknown',\n};\nif (accepted) result.p_provider_message_id = id;\nreturn {json:result};"
       },
       "id": "23f069a1-2449-4c8d-b264-45b744988691",
       "name": "Interpretar resultado de Meta",
@@ -1025,6 +1009,13 @@
     },
     "Enviar texto por WhatsApp": {
       "main": [
+        [
+          {
+            "node": "Interpretar resultado de Meta",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Interpretar resultado de Meta",
