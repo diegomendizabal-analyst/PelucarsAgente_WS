@@ -1,0 +1,597 @@
+{
+  "name": "Pelucars — Prueba de reserva de cierre",
+  "nodes": [
+    {
+      "id": "cf065a92-f9eb-45e9-8bf7-1455501c7945",
+      "name": "Inicio manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "8180cf28-142d-4edd-9bd3-69f865142f5e",
+      "name": "Parámetros acordados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {json:{\"modo\":\"vista_previa\",\"args\":{\"p_conversation_id\":\"DEMO_CONVERSACION_UUID\",\"p_reply_to\":\"DEMO_SEGUNDO_MENSAJE_UUID\",\"p_body\":\"DEMO_TEXTO_CIERRE\",\"p_reply_kind\":\"closing\",\"p_expected_reserved_slots\":0},\"lead_id\":\"DEMO_OPORTUNIDAD_UUID\",\"historial\":[{\"message_id\":\"DEMO_PRIMER_MENSAJE_UUID\",\"history_position\":null,\"body\":\"DEMO_TEXTO_PRIMERO\"},{\"message_id\":\"DEMO_SEGUNDO_MENSAJE_UUID\",\"history_position\":null,\"body\":\"DEMO_TEXTO_SEGUNDO\"}]}};"
+      }
+    },
+    {
+      "id": "e462ddb6-7904-4ac4-84e4-a2ac687d8a05",
+      "name": "Estado previo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2338987e-28b8-4324-ad0a-5820b877419a",
+      "name": "Historial previo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            },
+            {
+              "name": "p_limit",
+              "value": "3"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "faa9231c-c6c8-4964-9181-2264a9527b58",
+      "name": "Respuesta previa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "conversation_id",
+              "value": "eq.DEMO_CONVERSACION_UUID"
+            },
+            {
+              "name": "reply_to",
+              "value": "eq.DEMO_SEGUNDO_MENSAJE_UUID"
+            },
+            {
+              "name": "select",
+              "value": "id,conversation_id,reply_to,body,reply_kind,bot_slot,send_state,sender_kind"
+            },
+            {
+              "name": "limit",
+              "value": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cce154ec-f78b-40b3-b0bf-f582fcbc3087",
+      "name": "Verificar antes de escribir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const p = $('Parámetros acordados').first().json;\nfunction historyOK(rows) {\n  return Array.isArray(rows) && rows.length === 2 && rows.every((r,i) =>\n    r.message_id === p.historial[i].message_id && r.history_position === p.historial[i].history_position &&\n    r.sender_kind === 'customer' && r.body === p.historial[i].body);\n}\nfunction stateOK(rows, state, slots) {\n  return Array.isArray(rows) && rows.length === 1 && rows[0].conversation_id === p.args.p_conversation_id &&\n    rows[0].lead_id === p.lead_id && rows[0].bot_state === state && rows[0].reserved_slots === slots && rows[0].sent_count === 0;\n}\nif (!stateOK($('Estado previo').first().json.body, 'collecting', 0) ||\n    !historyOK($('Historial previo').first().json.body) || !Array.isArray($json.body) || $json.body.length !== 0)\n  throw new Error('Precondiciones incumplidas. Revisar estado, historial y respuesta asociada.');\nreturn {json:{modo:p.modo,precondiciones:true,args:p.args}};"
+      }
+    },
+    {
+      "id": "c02788ed-ff46-4d8a-b7bf-c868bc18dc69",
+      "name": "¿Ejecutar reserva?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.modo }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "ejecutar_reserva"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dda551e5-c199-4b72-bece-e8ad0bcfed4b",
+      "name": "Reservar cierre",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/reserve_bot_reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Parámetros acordados').first().json.args }}"
+      }
+    },
+    {
+      "id": "ee8d97cf-9d09-4c74-90e7-21d42bfd2919",
+      "name": "Comprobar primera reserva",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const a = $('Parámetros acordados').first().json.args;\nfunction check(row) {\n  return row && !!row.id && row.conversation_id === a.p_conversation_id && row.reply_to === a.p_reply_to &&\n    row.body === a.p_body && row.reply_kind === 'closing' && row.bot_slot === 1 &&\n    row.send_state === 'pending' && row.sender_kind === 'bot';\n}\nconst raw = $json.body;\nconst row = Array.isArray(raw) ? (raw.length === 1 ? raw[0] : null) : raw;\nif (!check(row)) throw new Error('Reserva inesperada. Revisar antes de continuar.');\nreturn {json:row};"
+      }
+    },
+    {
+      "id": "85f389e9-0e55-4559-8679-ba670c7f27d6",
+      "name": "Repetir la misma reserva",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        300
+      ],
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/reserve_bot_reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Parámetros acordados').first().json.args }}"
+      }
+    },
+    {
+      "id": "566412bc-2fd2-4420-86e2-b67c613821f6",
+      "name": "Comparar registros",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const a = $('Parámetros acordados').first().json.args;\nfunction check(row) {\n  return row && !!row.id && row.conversation_id === a.p_conversation_id && row.reply_to === a.p_reply_to &&\n    row.body === a.p_body && row.reply_kind === 'closing' && row.bot_slot === 1 &&\n    row.send_state === 'pending' && row.sender_kind === 'bot';\n}\nconst raw = $json.body;\nconst row = Array.isArray(raw) ? (raw.length === 1 ? raw[0] : null) : raw;\nif (!check(row)) throw new Error('Reserva inesperada. Revisar antes de continuar.');\nif(row.id !== $('Comprobar primera reserva').first().json.id) throw new Error('El reintento devolvió otro registro');\nreturn {json:row};"
+      }
+    },
+    {
+      "id": "24a83c8e-8fbb-45c3-b6a6-710974aaab9d",
+      "name": "Estado final",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        300
+      ],
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "d59f8fea-6904-46fc-ba2f-a2ad306e0d25",
+      "name": "Historial final",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        300
+      ],
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            },
+            {
+              "name": "p_limit",
+              "value": "3"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1ecb4f27-f66d-41a9-9d0f-73d39b93a06f",
+      "name": "Respuesta persistida",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        300
+      ],
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "conversation_id",
+              "value": "eq.DEMO_CONVERSACION_UUID"
+            },
+            {
+              "name": "reply_to",
+              "value": "eq.DEMO_SEGUNDO_MENSAJE_UUID"
+            },
+            {
+              "name": "select",
+              "value": "id,conversation_id,reply_to,body,reply_kind,bot_slot,send_state,sender_kind"
+            },
+            {
+              "name": "limit",
+              "value": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "74f86dca-33a5-443d-9900-c120501b7f78",
+      "name": "Verificar resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const p = $('Parámetros acordados').first().json;\nfunction historyOK(rows) {\n  return Array.isArray(rows) && rows.length === 2 && rows.every((r,i) =>\n    r.message_id === p.historial[i].message_id && r.history_position === p.historial[i].history_position &&\n    r.sender_kind === 'customer' && r.body === p.historial[i].body);\n}\nfunction stateOK(rows, state, slots) {\n  return Array.isArray(rows) && rows.length === 1 && rows[0].conversation_id === p.args.p_conversation_id &&\n    rows[0].lead_id === p.lead_id && rows[0].bot_state === state && rows[0].reserved_slots === slots && rows[0].sent_count === 0;\n}\nconst rows = $json.body, r = $('Comparar registros').first().json;\nconst s = $('Estado final').first().json.body, h = $('Historial final').first().json.body;\nif (!stateOK(s,'waiting_assignment',1) || !historyOK(h) || !Array.isArray(rows) || rows.length !== 1 ||\n    !['id','conversation_id','reply_to','body','reply_kind','bot_slot','send_state','sender_kind'].every(k => rows[0][k] === r[k]))\n  throw new Error('Estado, respuesta persistida o historial final inesperado');\nreturn {json:{id_primera_reserva:$('Comprobar primera reserva').first().json.id,id_segunda_reserva:r.id,respuesta:rows[0],estado:s[0],historial:h}};"
+      }
+    }
+  ],
+  "connections": {
+    "Inicio manual": {
+      "main": [
+        [
+          {
+            "node": "Parámetros acordados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parámetros acordados": {
+      "main": [
+        [
+          {
+            "node": "Estado previo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estado previo": {
+      "main": [
+        [
+          {
+            "node": "Historial previo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Historial previo": {
+      "main": [
+        [
+          {
+            "node": "Respuesta previa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta previa": {
+      "main": [
+        [
+          {
+            "node": "Verificar antes de escribir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar antes de escribir": {
+      "main": [
+        [
+          {
+            "node": "¿Ejecutar reserva?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ejecutar reserva?": {
+      "main": [
+        [
+          {
+            "node": "Reservar cierre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reservar cierre": {
+      "main": [
+        [
+          {
+            "node": "Comprobar primera reserva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar primera reserva": {
+      "main": [
+        [
+          {
+            "node": "Repetir la misma reserva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Repetir la misma reserva": {
+      "main": [
+        [
+          {
+            "node": "Comparar registros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comparar registros": {
+      "main": [
+        [
+          {
+            "node": "Estado final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estado final": {
+      "main": [
+        [
+          {
+            "node": "Historial final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Historial final": {
+      "main": [
+        [
+          {
+            "node": "Respuesta persistida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta persistida": {
+      "main": [
+        [
+          {
+            "node": "Verificar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [
+    {
+      "id": "75d46ff2-9feb-47e8-bcb3-1bc45a65e503",
+      "name": "Lecturas previas",
+      "nodeNames": [
+        "Estado previo",
+        "Historial previo",
+        "Respuesta previa",
+        "Verificar antes de escribir"
+      ],
+      "description": "Comprueba oportunidad, conversación, mensajes y ausencia de reserva."
+    },
+    {
+      "id": "8e0995ef-e55d-4179-a9d8-6697cfe8ae90",
+      "name": "Reserva idempotente",
+      "nodeNames": [
+        "Reservar cierre",
+        "Comprobar primera reserva",
+        "Repetir la misma reserva",
+        "Comparar registros"
+      ],
+      "description": "Dos llamadas con idénticos parámetros. Exige un solo UUID en el cupo 1."
+    },
+    {
+      "id": "94862d5a-748c-47da-9f04-154790135326",
+      "name": "Comprobación final",
+      "nodeNames": [
+        "Estado final",
+        "Historial final",
+        "Respuesta persistida",
+        "Verificar resultado"
+      ],
+      "description": "Lee la respuesta pendiente y exige un cupo, cero envíos y los dos entrantes originales."
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

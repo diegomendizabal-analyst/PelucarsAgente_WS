@@ -1,0 +1,75 @@
+{
+  "name": "Pelucars — Recepción WhatsApp de prueba",
+  "nodes": [
+    {
+      "id": "f8b0be35-c4cc-475f-9ba1-a61f8ce16ceb",
+      "name": "WhatsApp Trigger",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {
+          "messageStatusUpdates": [
+            "all"
+          ]
+        }
+      }
+    },
+    {
+      "id": "deb0d089-2be8-492d-ab07-8a4242c37ee0",
+      "name": "Mensajes entrantes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -120
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (phoneId !== 'META_PHONE_NUMBER_ID') continue;\n  for (const message of event.messages ?? []) {\n    output.push({\n      json: { message_id: message.id, from: message.from, phone_number_id: phoneId, text: message.text?.body ?? null },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
+      }
+    },
+    {
+      "id": "474784ac-1c76-4eea-859a-0285d3f6c19c",
+      "name": "Notificaciones de estado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        120
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (phoneId !== 'META_PHONE_NUMBER_ID') continue;\n  for (const update of event.statuses ?? []) {\n    output.push({\n      json: { message_id: update.id, phone_number_id: phoneId, status: update.status },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Mensajes entrantes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notificaciones de estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

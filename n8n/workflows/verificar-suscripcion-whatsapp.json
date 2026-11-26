@@ -1,0 +1,186 @@
+{
+  "name": "Pelucars — Verificar suscripción de WhatsApp",
+  "nodes": [
+    {
+      "id": "fcfcccde-867a-4888-a2e9-0e4965f3cb7a",
+      "name": "Consulta manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "bf466296-fd24-4045-a714-6b2c90ef153a",
+      "name": "Números de la cuenta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.facebook.com/v25.0/META_WABA_ID/phone_numbers?fields=id&limit=100",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "c8030389-96c6-4410-bbbc-e53aeed43741",
+      "name": "Aplicaciones suscritas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.facebook.com/v25.0/META_WABA_ID/subscribed_apps?limit=100",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "6f5e10a0-5fcf-407e-8bf9-7b8865362bb8",
+      "name": "Identidad de la aplicación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.facebook.com/v25.0/META_APP_ID?fields=id,name",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "01aa5b10-c40c-472e-8ee0-3cbd7fbaa457",
+      "name": "Leer permisos de WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.facebook.com/v25.0/me/permissions?limit=100",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Consulta manual": {
+      "main": [
+        [
+          {
+            "node": "Números de la cuenta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Números de la cuenta": {
+      "main": [
+        [
+          {
+            "node": "Aplicaciones suscritas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicaciones suscritas": {
+      "main": [
+        [
+          {
+            "node": "Identidad de la aplicación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identidad de la aplicación": {
+      "main": [
+        [
+          {
+            "node": "Leer permisos de WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

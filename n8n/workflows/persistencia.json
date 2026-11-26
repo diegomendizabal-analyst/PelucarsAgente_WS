@@ -1,0 +1,661 @@
+{
+  "name": "Pelucars — Prueba manual de persistencia",
+  "nodes": [
+    {
+      "id": "96033a85-c00a-402d-b855-ec7f88998163",
+      "name": "Inicio manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        260
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "0a26e021-1d1b-4698-9d71-468d8b289749",
+      "name": "Datos de prueba",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        260
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {json:{\"modo\":\"vista_previa\",\"conversation_id\":\"DEMO_CONVERSACION_UUID\",\"provider\":\"pelucars-demo\",\"business_phone_id\":\"persistencia-manual\",\"provider_message_id\":\"DEMO_ID_EXTERNO\",\"body\":\"Prueba manual de persistencia de Pelucars. Mensaje demo para verificar idempotencia.\"}};"
+      }
+    },
+    {
+      "id": "062b0971-5940-4b38-800e-02ced88345ea",
+      "name": "Leer catálogo de RPC",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        260
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/openapi+json"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1acceca3-0a63-4ec6-a416-02575ae068ac",
+      "name": "Verificar contrato publicado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        260
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const paths = $json.body?.paths;\nconst expected = {receive_bot_message:['p_conversation_id','p_lead_id','p_source','p_phone_e164','p_provider','p_business_phone_id','p_provider_message_id','p_body'],get_bot_conversation:['p_conversation_id'],bot_message_history:['p_conversation_id','p_before','p_after','p_limit']};\nfor (const [name,keys] of Object.entries(expected)) {\n const post = paths?.['/rpc/'+name]?.post;\n const p = post?.parameters?.find(x => x.in === 'body')?.schema?.properties;\n if(!p || !keys.every(k => Object.hasOwn(p,k))) throw new Error('Firma no disponible: '+name);\n}\nreturn {json:{rpc:Object.keys(expected)}};"
+      }
+    },
+    {
+      "id": "41b869bd-6c4e-4467-987d-5921bfaea262",
+      "name": "Seleccionar oportunidad demo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        260
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/leads",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,reference_number,source,commercial_status,customers!inner(id,phone_e164)"
+            },
+            {
+              "name": "source",
+              "value": "eq.demo"
+            },
+            {
+              "name": "customers.phone_e164",
+              "value": "eq.+DEMO_REMITENTE_META"
+            },
+            {
+              "name": "closed_at",
+              "value": "is.null"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            },
+            {
+              "name": "id",
+              "value": "eq.DEMO_OPORTUNIDAD_UUID"
+            },
+            {
+              "name": "customer_id",
+              "value": "eq.DEMO_CLIENTE_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fe971b10-e70d-4b51-b5f2-c04f389d69b0",
+      "name": "Leer estado previo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        260
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fe0be4b9-0df3-451c-8226-03a963155b8b",
+      "name": "Leer historial previo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        260
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            },
+            {
+              "name": "p_limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ac67deda-0cda-44ec-9e04-09125cf75bff",
+      "name": "Buscar clave externa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        260
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,conversation_id"
+            },
+            {
+              "name": "provider",
+              "value": "eq.pelucars-demo"
+            },
+            {
+              "name": "business_phone_id",
+              "value": "eq.persistencia-manual"
+            },
+            {
+              "name": "provider_message_id",
+              "value": "eq.DEMO_ID_EXTERNO"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ca7c6c04-3919-45b2-ba8d-ea11a4da75ea",
+      "name": "Vista previa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        260
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const plan = $('Datos de prueba').first().json;\nconst candidates = $('Seleccionar oportunidad demo').first().json.body;\nconst lead = candidates?.[0];\nif (candidates.length !== 1 || lead.source !== 'demo' || !lead.customers?.phone_e164) throw new Error('Oportunidad demo no disponible');\nconst state = $('Leer estado previo').first().json.body;\nconst history = $('Leer historial previo').first().json.body;\nconst key = $json.body;\nif(![state,history,key].every(Array.isArray)) throw new Error('Lectura inválida');\nif (lead.id !== 'DEMO_OPORTUNIDAD_UUID' || lead.customers.id !== 'DEMO_CLIENTE_UUID' || lead.customers.phone_e164 !== '+DEMO_REMITENTE_META') throw new Error('La oportunidad demo cambió');\nif (state.length > 1 || key.length > 1) throw new Error('Resultado previo ambiguo');\nif (state.length || key.length || history.length) {\n  const own = state[0]?.lead_id === lead.id && state[0]?.bot_state === 'collecting' && state[0]?.reserved_slots === 0 && state[0]?.sent_count === 0 &&\n    key[0]?.conversation_id === plan.conversation_id && history.length === 1 &&\n    history[0].message_id === key[0].id && history[0].sender_kind === 'customer' && history[0].body === plan.body;\n  if (!own) throw new Error('Colisión con datos previos. Se detuvo antes de escribir.');\n}\nreturn {json:{...plan,lead_id:lead.id,referencia:lead.reference_number,estado_comercial:lead.commercial_status,source:lead.source,customer_id:lead.customers.id,phone_e164:lead.customers.phone_e164,rpc:$('Verificar contrato publicado').first().json.rpc,estado_previo:state,historial_previo:history.length,clave_previa:key}};"
+      }
+    },
+    {
+      "id": "e1d7c770-d225-432a-8b17-7e88c817e28f",
+      "name": "¿Ejecutar prueba?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1980,
+        260
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.modo }}",
+              "rightValue": "ejecutar_prueba",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5bc4e0cb-2fed-4469-aa65-4151f52ddd00",
+      "name": "Registrar entrante demo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        260
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/receive_bot_message",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_conversation_id:$('Vista previa').first().json.conversation_id,p_lead_id:$('Vista previa').first().json.lead_id,p_source:'demo',p_phone_e164:$('Vista previa').first().json.phone_e164,p_provider:$('Vista previa').first().json.provider,p_business_phone_id:$('Vista previa').first().json.business_phone_id,p_provider_message_id:$('Vista previa').first().json.provider_message_id,p_body:$('Vista previa').first().json.body} }}"
+      }
+    },
+    {
+      "id": "ed27c249-eec9-4a2e-b02c-b68bb530f13d",
+      "name": "Repetir ingreso idéntico",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        260
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/receive_bot_message",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_conversation_id:$('Vista previa').first().json.conversation_id,p_lead_id:$('Vista previa').first().json.lead_id,p_source:'demo',p_phone_e164:$('Vista previa').first().json.phone_e164,p_provider:$('Vista previa').first().json.provider,p_business_phone_id:$('Vista previa').first().json.business_phone_id,p_provider_message_id:$('Vista previa').first().json.provider_message_id,p_body:$('Vista previa').first().json.body} }}"
+      }
+    },
+    {
+      "id": "3488829b-523b-4e00-9874-dead1015d299",
+      "name": "Comprobar idempotencia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        260
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const first = $('Registrar entrante demo').first().json.body?.[0];\nconst second = $json.body?.[0];\nconst plan = $('Vista previa').first().json;\nif (!first?.message_id || first.conversation_id !== plan.conversation_id ||\n  first.created !== (plan.clave_previa.length === 0) ||\n  second?.message_id !== first.message_id || second.conversation_id !== first.conversation_id ||\n  second.history_position !== first.history_position || second.created !== false)\n  throw new Error('Las respuestas de ingreso no verifican idempotencia');\nreturn {json:{message_id:first.message_id,history_position:first.history_position,primero_creado:first.created,segundo_creado:second.created}};"
+      }
+    },
+    {
+      "id": "d53bba64-59a9-40aa-a737-09de70547a5e",
+      "name": "Recuperar historial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        260
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "method": "GET",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "05439672-30a1-432c-8eb5-eb48fd0883b6",
+      "name": "Recuperar estado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        260
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "method": "GET",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "995952c8-3a22-4ed7-80f8-2db628e30c08",
+      "name": "Verificar resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        260
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const r = $('Comprobar idempotencia').first().json;\nconst history = $('Recuperar historial').first().json.body;\nconst plan = $('Vista previa').first().json;\nconst s = $json.body?.[0];\nif (history?.length !== 1 || history[0]?.message_id !== r.message_id ||\n    history[0]?.history_position !== r.history_position || history[0]?.sender_kind !== 'customer' ||\n    history[0]?.body !== plan.body || s?.conversation_id !== plan.conversation_id || s?.lead_id !== plan.lead_id ||\n    s?.bot_state !== 'collecting' || s?.reserved_slots !== 0 || s?.sent_count !== 0)\n  throw new Error('El historial o el estado no coinciden con la prueba');\nreturn {json:{...r,estado:s,historial:history}};"
+      }
+    }
+  ],
+  "connections": {
+    "Inicio manual": {
+      "main": [
+        [
+          {
+            "node": "Datos de prueba",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos de prueba": {
+      "main": [
+        [
+          {
+            "node": "Leer catálogo de RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer catálogo de RPC": {
+      "main": [
+        [
+          {
+            "node": "Verificar contrato publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar contrato publicado": {
+      "main": [
+        [
+          {
+            "node": "Seleccionar oportunidad demo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seleccionar oportunidad demo": {
+      "main": [
+        [
+          {
+            "node": "Leer estado previo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer estado previo": {
+      "main": [
+        [
+          {
+            "node": "Leer historial previo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer historial previo": {
+      "main": [
+        [
+          {
+            "node": "Buscar clave externa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar clave externa": {
+      "main": [
+        [
+          {
+            "node": "Vista previa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vista previa": {
+      "main": [
+        [
+          {
+            "node": "¿Ejecutar prueba?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ejecutar prueba?": {
+      "main": [
+        [
+          {
+            "node": "Registrar entrante demo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar entrante demo": {
+      "main": [
+        [
+          {
+            "node": "Repetir ingreso idéntico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Repetir ingreso idéntico": {
+      "main": [
+        [
+          {
+            "node": "Comprobar idempotencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar idempotencia": {
+      "main": [
+        [
+          {
+            "node": "Recuperar historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperar historial": {
+      "main": [
+        [
+          {
+            "node": "Recuperar estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperar estado": {
+      "main": [
+        [
+          {
+            "node": "Verificar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [
+    {
+      "id": "105e50f5-a80e-4193-88c6-bd0263a57934",
+      "name": "Contrato RPC",
+      "nodeNames": [
+        "Leer catálogo de RPC",
+        "Verificar contrato publicado"
+      ],
+      "description": "Verifica las firmas mediante el catálogo de Supabase."
+    },
+    {
+      "id": "37215c85-060a-4d44-ad9d-aa8edeb74e94",
+      "name": "Lecturas previas",
+      "nodeNames": [
+        "Seleccionar oportunidad demo",
+        "Leer estado previo",
+        "Leer historial previo",
+        "Buscar clave externa",
+        "Vista previa"
+      ],
+      "description": "Selecciona una oportunidad demo y comprueba el estado de los identificadores propuestos."
+    },
+    {
+      "id": "5401ed0c-4571-4c1d-a330-3a8be6a58e9e",
+      "name": "Comprobar reingreso",
+      "nodeNames": [
+        "Registrar entrante demo",
+        "Repetir ingreso idéntico",
+        "Comprobar idempotencia"
+      ],
+      "description": "Registra y repite exactamente el mismo mensaje; exige el mismo ID y created=false en la segunda respuesta."
+    },
+    {
+      "id": "fe3c7817-bf01-4615-ab2b-14094501cada",
+      "name": "Verificación final",
+      "nodeNames": [
+        "Recuperar historial",
+        "Recuperar estado",
+        "Verificar resultado"
+      ],
+      "description": "Lee el mensaje único y el estado collecting con cero cupos y envíos."
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
