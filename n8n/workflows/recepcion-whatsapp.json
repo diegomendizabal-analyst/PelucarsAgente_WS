@@ -296,6 +296,66 @@
       ]
     },
     {
+      "id": "31809b9c-a791-4eed-9b8a-6ac92ad6347b",
+      "name": "Guardar resumen de la oportunidad",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2690,
+        176
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/save_bot_lead_summary",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { p_conversation_id: $('Mensaje registrado').item.json.conversation_id, p_message_id: $('Mensaje registrado').item.json.message_id, p_summary: $json.output.resumen_consulta } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "b2c290e4-b369-4c8d-b488-d449e8aa3aa9",
+      "name": "¿Resumen vigente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2890,
+        176
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body?.length === 1 && ['applied', 'unchanged'].includes($json.body[0]?.outcome) && $json.body[0]?.source_message_id === $('Mensaje registrado').item.json.message_id }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
       "parameters": {
         "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
         "authentication": "predefinedCredentialType",
@@ -829,7 +889,7 @@
       "main": [
         [
           {
-            "node": "Leer estado vigente",
+            "node": "Guardar resumen de la oportunidad",
             "type": "main",
             "index": 0
           }
@@ -1046,6 +1106,35 @@
           }
         ]
       ]
+    },
+    "Guardar resumen de la oportunidad": {
+      "main": [
+        [
+          {
+            "node": "¿Resumen vigente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Resumen vigente?": {
+      "main": [
+        [
+          {
+            "node": "Leer estado vigente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Procesar cada mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [
@@ -1074,7 +1163,9 @@
         "Leer historial anterior",
         "Preparar contexto",
         "Extraer datos de la consulta",
-        "OpenAI Chat Model"
+        "OpenAI Chat Model",
+        "Guardar resumen de la oportunidad",
+        "¿Resumen vigente?"
       ]
     },
     {
