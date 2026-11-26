@@ -226,6 +226,65 @@ def early_closing(db, connect):
             ("waiting_assignment", 1)]
 
 
+
+def lead_summary(db, connect):
+    save = "select * from public.save_bot_lead_summary(%s,%s,%s)"
+    chat = UUID(int=94)
+    first_chat = UUID(int=95)
+    # Texto comercial de #46, con identidades exclusivamente locales.
+    summary = ("Busca un Corolla automático, modelo 2022 en adelante, con un presupuesto total de 20.000 USD. "
+               "Quiere comprar dentro de los próximos 15 días, no entrega usado y no necesita financiación.")
+    with connect() as bot:
+        bot.execute("set role service_role")
+        old = rows(bot, RECEIVE, inbound("resumen-otra-conversacion", first_chat))[0][1]
+        a, b, c = [rows(bot, RECEIVE, inbound(f"resumen-{n}", chat, body=body))[0][1]
+                   for n, body in enumerate(("Busco un Corolla automático 2022 en adelante. Presupuesto total 20.000 USD.",
+                                             "Quiero comprar dentro de 15 días. No necesito financiación.",
+                                             "No entrego usado"))]
+        entry = (chat, c, summary)
+        # La oportunidad es el dominio del bloqueo, aun entre conversaciones.
+        first, second = overlap(db, connect, save, (first_chat, old, "Consulta anterior"), (chat, a, "Corolla"))
+        assert first == [(LEAD, old, "applied")] and second == [(LEAD, a, "applied")]
+        before = rows(bot, HISTORY, (chat, None, 0, 100)), rows(bot, COUNTS, (chat,))
+        with bot.transaction(force_rollback=True):
+            assert rows(bot, save, entry) == [(LEAD, c, "applied")]
+        assert rows(bot, "select summary from public.leads where id=%s", (LEAD,)) == [("Corolla",)]
+        # La escritura más reciente vence incluso cuando la ejecución antigua espera el bloqueo.
+        first, second = overlap(db, connect, save, (chat, b, "Plazo confirmado"), (first_chat, old, "Consulta anterior"))
+        assert first == [(LEAD, b, "applied")] and second == [(LEAD, b, "stale")]
+        first, second = overlap(db, connect, save, entry, entry)
+        assert first == [(LEAD, c, "applied")] and second == [(LEAD, c, "unchanged")]
+        state = "select summary, updated_at from public.leads where id=%s"
+        snapshot = rows(bot, state, (LEAD,))
+        assert snapshot[0][0] == summary
+        first, second = overlap(db, connect, save, entry, (first_chat, old, "Consulta anterior"))
+        assert first == [(LEAD, c, "unchanged")] and second == [(LEAD, c, "stale")]
+        assert rows(bot, save, (chat, b, "Resumen anterior")) == [(LEAD, c, "stale")]
+        expect_error("PT409", bot, save, (chat, c, "Otro resumen"))
+        for bad in (None, "  ", "\t\n", "x" * 6001):
+            expect_error("22023", bot, save, (chat, c, bad))
+        expect_error("22023", bot, save, (OTHER_CHAT, c, summary))
+        out = rows(bot, "select id from public.messages where bot_slot=3 and conversation_id=%s", (CHAT,))[0][0]
+        expect_error("22023", bot, save, (CHAT, out, summary))
+        assert rows(bot, state, (LEAD,)) == snapshot
+        assert before == (rows(bot, HISTORY, (chat, None, 0, 100)), rows(bot, COUNTS, (chat,)))
+        assert rows(bot, "select message_id from private.bot_lead_summary_sources where lead_id=%s", (LEAD,)) == [(c,)]
+
+        db.execute("update public.leads set summary='Revisado en CRM' where id=%s", (LEAD,))
+        newest = rows(bot, RECEIVE, inbound("resumen-4", chat))[0][1]
+        expect_error("PT409", bot, save, (chat, newest, summary))
+        assert rows(bot, state, (LEAD,))[0][0] == "Revisado en CRM"
+        legacy = rows(bot, RECEIVE, inbound("resumen-previo", OTHER_CHAT, PENDING, business="demo-line-2"))[0][1]
+        db.execute("update public.leads set summary='Resumen preexistente' where id=%s", (PENDING,))
+        expect_error("PT409", bot, save, (OTHER_CHAT, legacy, summary))
+    with connect() as panel:
+        for role in ("anon", "authenticated"):
+            panel.execute(f"set role {role}")
+            expect_error("42501", panel, save, entry)
+            expect_error("42501", panel, "select * from private.bot_lead_summary_sources")
+            panel.execute("reset role")
+
+
 def run():
     # Ignore ambient libpq connection/service settings, including PGSERVICE and PGHOSTADDR.
     for key in list(os.environ):
@@ -263,7 +322,8 @@ def run():
                     db.execute((ROOT / "tests" / f"{regression}.sql").read_text(encoding="utf-8-sig"))
                 exercise(db, connect)
                 early_closing(db, connect)
-                print("OK: migraciones, 3 regresiones CRM/identidad, ingreso, historial, cupos, concurrencia y RLS")
+                lead_summary(db, connect)
+                print("OK: migraciones, 3 regresiones CRM/identidad, ingreso, historial, cupos, concurrencia, resumen y RLS")
         finally:
             subprocess.run([*ctl, "-m", "immediate", "stop"], check=True)
 
