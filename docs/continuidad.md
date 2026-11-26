@@ -55,12 +55,12 @@ Widget implementado con DolarAPI oficial y calculadora informativa ARS ↔ USD a
 ### WhatsApp · Punto de partida para el 26 de noviembre de 2026
 
 - La recepción real quedó confirmada después de suscribir la app a la cuenta de WhatsApp de prueba (#26–#27). En Supabase se comprobaron el ingreso sin duplicados, el historial, el contexto entre turnos y las reservas idempotentes (#19–#21).
-- **OP-000060 está pausada.** La lectura #36 confirmó dos entradas del cliente, dos cupos reservados, cero envíos confirmados y estado `collecting`. El procesamiento volvió a quedar deshabilitado. Los workflows siguen sin publicar.
+- **OP-000060 quedó en `waiting_assignment`.** Antes de #46, la lectura #45 verificó dos reservas y cero envíos. Al terminar se deshabilitó el procesamiento y los workflows siguen sin publicar.
 - **#34, cupo 1.** El nodo HTTP informó `invalid syntax` al construir la solicitud. La reserva quedó `unknown`, sin ID de Meta. Revisar cómo distinguir un error local previo al transporte de una respuesta incierta. El cuerpo se corrigió para el siguiente turno.
 - **#35, cupo 2.** El nuevo intento fue rechazado por Meta con HTTP 403 y código 131005. La reserva quedó `failed`, sin ID de salida. En #37 figuraban concedidos los permisos de gestión y mensajería. La causa específica del rechazo sigue pendiente.
 - **Diagnóstico del 26/11.** El control aislado #38 recibió 401 / 190 y #39 confirmó el vencimiento del token. Con la credencial actualizada, #40 verificó la app, la cuenta, el número y los permisos. Meta aceptó el envío aislado #41 y el destinatario confirmó la llegada. Ninguno de estos controles consumió cupos.
-- **Cambio preparado en el PR #9.** El HTTP de #35 armaba el cuerpo manualmente y pasaba el destinatario sin `+`. El borrador ahora usa el nodo WhatsApp Business Cloud de #41, con el mismo remitente, destinatario y credencial. El texto se lee de la reserva tomada. La entrega de #41 confirma el transporte aislado. Sigue pendiente validar el recorrido integrado en una prueba coordinada que preserve los dos cupos anteriores y el tercero de OP-000060.
-- Conservar la conversación, los mensajes y ambos cupos. No reenviar automáticamente las reservas anteriores. Quedan pendientes el guardado del resumen, score y evidencias.
+- **Prueba integrada #46.** El trigger recibió «No entrego usado» del remitente autorizado. La entrada fue nueva (`created=true`). El flujo reservó el cierre en el cupo 3, obtuvo una sola toma y lo envió una vez por WhatsApp Business Cloud. Supabase registró `sent` con el ID de Meta y el destinatario confirmó la recepción en el celular.
+- **Verificación #47.** `reserved_slots=3`, `sent_count=1`. El historial muestra tres entradas del cliente y el cierre del bot en ese orden. Los cupos 1 y 2 conservan `unknown` y `failed`. Conservar los registros y evitar reenvíos. Quedan pendientes el guardado del resumen, score y evidencias.
 
 [Inventario de workflows y resultados](../n8n/workflows/README.md)
 
