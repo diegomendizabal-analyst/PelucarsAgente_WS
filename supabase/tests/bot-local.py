@@ -1,4 +1,6 @@
 """Run against a fresh private PostgreSQL cluster. Never accepts a database URL."""
+import argparse
+import json
 import os
 import secrets
 import socket
@@ -10,6 +12,7 @@ from pathlib import Path
 from uuid import UUID
 
 import psycopg
+from psycopg.types.json import Jsonb
 
 ROOT = Path(__file__).resolve().parents[1]
 ADMIN, OWNER, OTHER, CUSTOMER, LEAD, CHAT, PENDING, OTHER_CHAT = map(UUID, [
@@ -285,7 +288,89 @@ def lead_summary(db, connect):
             panel.execute("reset role")
 
 
-def run():
+def exercise_score(db, connect):
+    fixture(db)
+    # Proyección comercial de la extracción guardada. Sólo las identidades de la demo local.
+    text = ("Busco un Corolla automático, modelo 2022 en adelante. Mi presupuesto total es de 20.000 dólares. "
+            "Quiero comprar dentro de los próximos 15 días. No entrego usado y no necesito financiación")
+    extraction = {
+        "vehiculo_buscado": "Corolla", "caracteristicas": ["Automático", "Modelo 2022 en adelante"],
+        "presupuesto_importe": 20000, "presupuesto_moneda": "USD", "presupuesto_alcance": "valor_total",
+        "decision_entrega_usado": "descartada",
+        "senales_score": {
+            "plazo_categoria": "de_8_a_30_dias", "intencion_categoria": "no_informada",
+            "plazo_evidencias": ["Quiero comprar dentro de los próximos 15 días"], "intencion_evidencias": [],
+            "busqueda_evidencias": ["Busco un Corolla automático, modelo 2022 en adelante"],
+            "presupuesto_evidencias": ["Mi presupuesto total es de 20.000 dólares"],
+        },
+    }
+    workflow = json.loads((ROOT.parent / "n8n/workflows/recepcion-bot.json").read_text())
+    scorer = next(n["parameters"]["jsCode"] for n in workflow["nodes"] if n["name"] == "Calcular score")
+    js = """const {code, input} = JSON.parse(require('node:fs').readFileSync(0, 'utf8'));
+      const result = Function('$json', code)(input).json.evaluacion_score;
+      console.log(JSON.stringify(result));"""
+    result = json.loads(subprocess.run(["node", "-e", js], text=True, capture_output=True, check=True,
+                        input=json.dumps({"code": scorer, "input": extraction})).stdout)
+    assert result["total"] == 50 and result["banda"] == "media"
+    assert {k: d["puntos"] for k, d in result["desglose"].items()} == {
+        "plazo": 20, "intencion": 0, "busqueda": 15, "presupuesto": 15}
+    save = "select * from public.save_bot_score(%s,%s,%s,%s)"
+    with connect() as bot:
+        bot.execute("set role service_role")
+        msg = rows(bot, RECEIVE, inbound("score-demo", body=text))[0][1]
+        args = (CHAT, msg, Jsonb(result), None)
+        first, retry = overlap(db, connect, save, args, args)
+        evaluation = first[0][0]
+        assert first == [(evaluation, "applied")] and retry == [(evaluation, "unchanged")]
+        persisted = rows(bot, """select score, rules_version, rules_snapshot, result, evaluated_at
+                              from public.score_evaluations where id=%s""", (evaluation,))[0]
+        assert persisted[0:2] == (50, "pelucars_score_v1_prototipo") and persisted[3] == result
+        assert persisted[2]["plazo"]["de_8_a_30_dias"] == 20
+        assert rows(bot, save, args) == retry
+        assert rows(bot, "select evaluated_at from public.score_evaluations") == [(persisted[4],)]
+        citations = rows(bot, "select signal_code, message_id, quoted_text from public.score_evidence")
+        assert set(citations) == {(k, msg, q) for k, d in result["desglose"].items() for q in d["evidencias"]}
+        expect_error("PT409", bot, save, (CHAT, msg, Jsonb({**result, "total": 49}), None))
+        foreign = rows(bot, RECEIVE, inbound("otro-lead", OTHER_CHAT, PENDING, body=text))[0][1]
+        expect_error("22023", bot, save, (CHAT, foreign, Jsonb(result), None))
+        # Ninguna cita puede proceder de otro lead o de un turno futuro.
+        empty_chat = UUID(int=96)
+        cutoff = rows(bot, RECEIVE, inbound("sin-evidencia", empty_chat, body="Hola"))[0][1]
+        rows(bot, RECEIVE, inbound("posterior", empty_chat, body=text))
+        expect_error("22023", bot, save, (empty_chat, cutoff, Jsonb(result), None))
+        assert rows(bot, "select count(*) from public.score_evaluations") == [(1,)]
+        assert rows(bot, "select count(*) from public.score_evidence") == [(3,)]
+        # Falla en el último grupo, después de haber insertado citas válidas.
+        bad_result = json.loads(json.dumps(result))
+        bad_result["desglose"]["presupuesto"]["evidencias"] = ["una frase inventada"]
+        expect_error("22023", bot, save, (OTHER_CHAT, foreign, Jsonb(bad_result), None))
+        assert rows(bot, "select count(*) from public.score_evidence") == [(3,)]
+        assert rows(bot, "select count(*) from public.score_evaluations") == [(1,)]
+        later = rows(bot, RECEIVE, inbound("duplicar-cita", body=text))[0][1]
+        expect_error("22023", bot, save, (CHAT, later, Jsonb(result), None))
+        # Varias citas de una señal no suman de nuevo su contribución.
+        multi = json.loads(json.dumps(result))
+        quotes = multi["desglose"]["busqueda"]["evidencias"]
+        quotes.extend([quotes[0], "modelo 2022 en adelante"])
+        pending_eval = rows(bot, save, (OTHER_CHAT, foreign, Jsonb(multi), None))[0][0]
+        assert rows(bot, "select count(*) from public.score_evidence where evaluation_id=%s", (pending_eval,)) == [(4,)]
+        assert rows(bot, "select score from public.score_evaluations where id=%s", (pending_eval,)) == [(50,)]
+        expect_error("42501", bot, "delete from public.score_evidence")
+
+    with connect() as panel:
+        panel.execute("set role anon")
+        expect_error("42501", panel, "select * from public.score_evaluations")
+        panel.execute("reset role")
+        panel.execute("set role authenticated")
+        for uid, evaluations, evidence in [(ADMIN, 2, 7), (OWNER, 1, 3), (OTHER, 0, 0)]:
+            panel.execute("select set_config('request.jwt.claim.sub',%s,false)", (str(uid),))
+            assert rows(panel, "select count(*) from public.score_evaluations") == [(evaluations,)]
+            assert rows(panel, "select count(*) from public.score_evidence") == [(evidence,)]
+            expect_error("42501", panel, save, args)
+    print("OK: demo local 50/100, desglose 20+0+15+15, tres citas, reintento concurrente, rollback y RLS")
+
+
+def run(score_only=False):
     # Ignore ambient libpq connection/service settings, including PGSERVICE and PGHOSTADDR.
     for key in list(os.environ):
         if key.startswith("PG"):
@@ -318,6 +403,9 @@ def run():
                     grant usage on schema auth to anon,authenticated,service_role;""")
                 for migration in sorted((ROOT / "migrations").glob("*.sql")):
                     db.execute(migration.read_text(encoding="utf-8-sig"))
+                if score_only:
+                    exercise_score(db, connect)
+                    return
                 for regression in ("identity", "crm", "crm-recurrence"):
                     db.execute((ROOT / "tests" / f"{regression}.sql").read_text(encoding="utf-8-sig"))
                 exercise(db, connect)
@@ -331,4 +419,6 @@ def run():
 if __name__ == "__main__":
     if not __debug__:
         raise SystemExit("Run without python -O so test assertions are enabled.")
-    run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--score-only", action="store_true", help="Run only the score persistence checks")
+    run(score_only=parser.parse_args().score_only)
