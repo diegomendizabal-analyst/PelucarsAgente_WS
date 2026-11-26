@@ -11,6 +11,7 @@ Cada operación corresponde a un POST a `/rest/v1/rpc/<nombre>`, con un objeto J
 | `receive_bot_message` | `p_conversation_id`, `p_lead_id` (UUID), `p_source` (`demo` o `whatsapp_bot`), `p_phone_e164`, `p_provider`, `p_business_phone_id`, `p_provider_message_id`, `p_body` (texto) | Una fila con `conversation_id`, `message_id`, `history_position` y `created`. Un reintento idéntico devuelve los mismos identificadores con `created=false`. |
 | `bot_message_history` | `p_conversation_id`, opcionales `p_before` (bigint), `p_after` (bigint, inicial 0), `p_limit` (entero, predeterminado 100, entre 1 y 500) | Filas en orden ascendente con `message_id`, `history_position`, `sender_kind` (`customer` o `bot`), `body` y `occurred_at`. Los dos límites son exclusivos. |
 | `get_bot_conversation` | `p_conversation_id` | Una fila con `conversation_id`, `lead_id`, `bot_state`, `reserved_slots` (0–3) y `sent_count` (confirmados). Ambas lecturas devuelven una lista vacía si el registro carece de visibilidad. |
+| `save_bot_lead_summary` | `p_conversation_id`, `p_message_id` (UUID del entrante), `p_summary` (texto de `output.resumen_consulta`, 1–6000 caracteres) | Una fila con `lead_id`, `source_message_id` y `outcome` (`applied`, `unchanged` o `stale`). Sólo `service_role`. |
 | `reserve_bot_reply` | `p_conversation_id`, `p_reply_to` (UUID del entrante), `p_body` (texto), `p_reply_kind` (`question` o `closing`), `p_expected_reserved_slots` (entero 0–3) | Registro saliente con `id`, `bot_slot`, `reply_kind` y `send_state`. Una reserva nueva nace en `pending`. Un reintento con el mismo entrante, tipo y texto devuelve el mismo registro en su estado actual. |
 | `claim_bot_reply` | `p_conversation_id`, `p_message_id` (UUID del saliente) | Una fila con `message_id`, `send_state` y `claimed`. Sólo `claimed=true` autoriza comenzar un intento de envío. Cambia `pending` a `sending` bajo bloqueo. |
 | `record_bot_reply_result` | `p_conversation_id`, `p_message_id`, `p_state`, opcional `p_provider_message_id` | Registro saliente actualizado. Para `sent`, indicar el ID confirmado por el proveedor. Para `failed` o `unknown`, omitirlo. Repetir el mismo resultado devuelve el registro existente. |
@@ -39,6 +40,19 @@ Ejemplo de cuerpo para `receive_bot_message`, usando las identidades de la prueb
 2. Usar la `history_position` devuelta como `p_before` y paginar con la última posición como `p_after`. Conservar ese corte en todas las páginas y anexar el entrante actual una sola vez. La posición expresa el orden durable en la base y puede tener saltos. Un saliente entra en el historial en la posición de su confirmación. Los mensajes pendientes, fallidos o inciertos siguen visibles como registros operativos.
 3. Un `created=false` permite retomar una operación interrumpida después de la escritura. Recuperar la decisión/reserva existente por `reply_to` antes de iniciar efectos externos. Frente a dos ejecuciones, la primera reserva fija el texto y el tipo de respuesta. Si difieren en una llamada posterior, recuperar el registro original.
 4. Recibir un texto tras detener el bot conserva el historial. El estado impide nuevas reservas. La integración futura deberá tratar por separado los eventos sin texto, los acuses de entrega y los mensajes sin identidad externa estable.
+
+### Resumen de la oportunidad
+
+Después de extraer los datos, enviar el resumen literal junto con los UUID devueltos por `receive_bot_message`. La RPC deriva la oportunidad de la conversación y comprueba que el mensaje pertenece al cliente y a esa conversación. La respuesta identifica la oportunidad y el mensaje del resumen vigente.
+
+- `applied` guarda el texto en `leads.summary` y su procedencia en la misma transacción. La posición global de historial del entrante ordena los resúmenes incluso entre conversaciones de la misma oportunidad.
+- `unchanged` confirma un reintento idéntico. Conserva la procedencia y `leads.updated_at`. Si se pierde la respuesta HTTP, repetir sólo esta RPC con el mismo texto y los mismos UUID.
+- `stale` indica que ya se aplicó un mensaje posterior. El workflow pasa al siguiente entrante sin reservar ni enviar para el turno antiguo.
+- `PT409` exige revisar un texto diferente para el mismo mensaje o un resumen preexistente/editado fuera del bot. La transacción conserva la información guardada. `22023` identifica texto inválido, un saliente o un mensaje ajeno a la conversación.
+
+La tabla privada conserva el texto aplicado para detectar ediciones independientes. Las lecturas de la ficha mantienen las políticas de `leads` y la bandeja de pendientes conserva su proyección. No hay backfill al aplicar la migración.
+
+Para recuperar una extracción ya hecha, usar exclusivamente `POST /rest/v1/rpc/save_bot_lead_summary`. Tomar ambos UUID de «Mensaje registrado» y el texto de «Extraer datos de la consulta» en la misma ejecución. En #46 se comprobó que «Preparar contexto» contenía los dos turnos previos y el entrante actual. El cierre saliente se produjo después. La prueba local reproduce los tres turnos con identidades de demo y el resumen exacto de esa extracción. Para verificar en el entorno compartido, aplicar primero la migración revisada y leer la ficha antes y después de la llamada.
 
 ### Cupos y resultados
 
