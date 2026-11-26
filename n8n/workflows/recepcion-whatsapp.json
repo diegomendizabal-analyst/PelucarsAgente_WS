@@ -2,14 +2,6 @@
   "name": "Pelucars — Recepción WhatsApp de prueba",
   "nodes": [
     {
-      "id": "f8b0be35-c4cc-475f-9ba1-a61f8ce16ceb",
-      "name": "WhatsApp Trigger",
-      "type": "n8n-nodes-base.whatsAppTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ],
       "parameters": {
         "updates": [
           "messages"
@@ -19,35 +11,743 @@
             "all"
           ]
         }
-      }
+      },
+      "id": "f8b0be35-c4cc-475f-9ba1-a61f8ce16ceb",
+      "name": "WhatsApp Trigger",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
     },
     {
+      "parameters": {
+        "jsCode": "const result = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  if (event.field !== 'messages' || event.metadata?.phone_number_id !== 'META_PHONE_NUMBER_ID') continue;\n  for (const m of event.messages ?? []) {\n    if (m.from !== 'DEMO_REMITENTE_META' || m.type !== 'text' || !m.id?.trim() || !m.text?.body?.trim()) continue;\n    result.push({json:{message_id:m.id, from:m.from, phone_number_id:event.metadata.phone_number_id, text:m.text.body}, pairedItem:{item:index}});\n  }\n}\nreturn result;"
+      },
       "id": "deb0d089-2be8-492d-ab07-8a4242c37ee0",
       "name": "Mensajes entrantes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         320,
-        -120
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (phoneId !== 'META_PHONE_NUMBER_ID') continue;\n  for (const message of event.messages ?? []) {\n    output.push({\n      json: { message_id: message.id, from: message.from, phone_number_id: phoneId, text: message.text?.body ?? null },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
-      }
+        -112
+      ]
     },
     {
+      "parameters": {
+        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (event.field !== 'messages' || phoneId !== 'META_PHONE_NUMBER_ID') continue;\n  for (const update of event.statuses ?? []) {\n    if (update.recipient_id !== 'DEMO_REMITENTE_META' && update.recipient_id !== 'DEMO_DESTINATARIO_META') continue;\n    output.push({\n      json: { message_id: update.id, phone_number_id: phoneId, status: update.status },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
+      },
       "id": "474784ac-1c76-4eea-859a-0285d3f6c19c",
       "name": "Notificaciones de estado",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         320,
-        120
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Habilitar después de aprobar y preparar los registros demo.\nconst habilitada = false;\nreturn habilitada ? $input.all() : [];"
+      },
+      "id": "9e35f0f4-d154-47b6-ba5f-83a665953a4e",
+      "name": "Habilitar integración demo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "dcbb4942-abdf-4f20-a797-29759cf1ec03",
+      "name": "Procesar cada mensaje",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        800,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/receive_bot_message",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_conversation_id:\"DEMO_CONVERSACION_UUID\",p_lead_id:\"DEMO_OPORTUNIDAD_UUID\",p_source:'demo',p_phone_e164:'+'+$json.from,p_provider:'whatsapp_cloud',p_business_phone_id:$json.phone_number_id,p_provider_message_id:$json.message_id,p_body:$json.text} }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "911452ec-ff8e-4b0e-b5b0-3651170a6daa",
+      "name": "Guardar entrada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1056,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const r=$json.body?.[0];\nif ($json.body?.length !== 1 || r.conversation_id !== \"DEMO_CONVERSACION_UUID\" || !r.message_id || !Number.isSafeInteger(r.history_position) || typeof r.created !== 'boolean') throw new Error('Ingreso inesperado');\nreturn {json:{...r,mensaje:$('Procesar cada mensaje').item.json.text}};"
+      },
+      "id": "ba676930-2d0e-4f7f-b3ec-2a84fccdfe86",
+      "name": "Mensaje registrado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,conversation_id,reply_to,sender_kind,reply_kind,body,bot_slot,send_state"
+            },
+            {
+              "name": "conversation_id",
+              "value": "eq.DEMO_CONVERSACION_UUID"
+            },
+            {
+              "name": "reply_to",
+              "value": "={{ 'eq.'+$('Mensaje registrado').item.json.message_id }}"
+            },
+            {
+              "name": "sender_kind",
+              "value": "eq.bot"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "948ae078-aada-4ce1-94c2-a9ed685a3765",
+      "name": "Buscar respuesta original",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1536,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ Array.isArray($json.body) && $json.body.length === 1 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "10da0d95-a7a1-43ce-b4a9-473bb75990e1",
+      "name": "¿Existe reserva?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1776,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/bot_message_history",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            },
+            {
+              "name": "p_before",
+              "value": "={{ $('Mensaje registrado').item.json.history_position }}"
+            },
+            {
+              "name": "p_limit",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "p_after",
+                    "value": "={{ $pageCount === 0 ? 0 : $response.body[$response.body.length - 1].history_position }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ Array.isArray($response.body) && $response.body.length < 100 }}"
+            }
+          }
+        }
+      },
+      "id": "c2515f5c-2d55-401e-8c6b-364e726ff337",
+      "name": "Leer historial anterior",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const actual=$('Mensaje registrado').itemMatching(0).json;\nconst rows = $input.all().flatMap(p => {\n  if (!Array.isArray(p.json.body)) throw new Error('Página de historial inválida.');\n  return p.json.body;\n});\nlet anterior = 0;\nconst ids = new Set();\nconst historial = rows.map(r => {\n  if (!Number.isSafeInteger(r.history_position) || r.history_position <= anterior || r.history_position >= actual.history_position ||\n      !r.message_id || r.message_id === actual.message_id || ids.has(r.message_id) || !['bot','customer'].includes(r.sender_kind))\n    throw new Error('Página fuera de orden, autor inválido o mensaje repetido.');\n  anterior = r.history_position; ids.add(r.message_id);\n  return (r.sender_kind === 'customer' ? 'Cliente: ' : 'Bot: ') + r.body;\n});\n\nreturn [{json:{mensaje:actual.mensaje,historial:historial.join('\\n')},pairedItem:{item:0}}];"
+      },
+      "id": "09a89746-007d-4b0d-b688-979c5c2f88dd",
+      "name": "Preparar contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "text": "=Historial de la conversación (Cliente = persona que consulta, Bot = asistente de Pelucars):\n{{ $json.historial }}\n\nÚltimo mensaje del cliente:\nCliente: {{ $json.mensaje }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"vehiculo_buscado\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"caracteristicas\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"presupuesto_importe\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ]\n    },\n    \"presupuesto_moneda\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"enum\": [\n        \"ARS\",\n        \"USD\",\n        null\n      ]\n    },\n    \"presupuesto_alcance\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"enum\": [\n        \"valor_total\",\n        \"dinero_a_agregar\",\n        null\n      ]\n    },\n    \"tiene_usado\": {\n      \"type\": [\n        \"boolean\",\n        \"null\"\n      ]\n    },\n    \"decision_entrega_usado\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"confirmada\",\n        \"descartada\",\n        \"indecisa\",\n        \"no_informada\"\n      ]\n    },\n    \"usado_detalle\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"plazo_compra\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"necesita_financiacion\": {\n      \"type\": [\n        \"boolean\",\n        \"null\"\n      ]\n    },\n    \"resumen_consulta\": {\n      \"type\": \"string\",\n      \"maxLength\": 500\n    },\n    \"senales_score\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"plazo_categoria\": {\"type\": \"string\", \"enum\": [\"hasta_7_dias\",\"de_8_a_30_dias\",\"de_31_a_90_dias\",\"mas_de_90_dias\",\"sin_definir\",\"ambiguo\",\"no_informado\"]},\n        \"plazo_evidencias\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        \"intencion_categoria\": {\"type\": \"string\", \"enum\": [\"reserva_compra\",\"visita_prueba\",\"propuesta_concreta\",\"consulta_general\",\"no_informada\"]},\n        \"intencion_evidencias\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        \"busqueda_evidencias\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        \"presupuesto_evidencias\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}\n      },\n      \"required\": [\"plazo_categoria\",\"plazo_evidencias\",\"intencion_categoria\",\"intencion_evidencias\",\"busqueda_evidencias\",\"presupuesto_evidencias\"]\n    }\n  },\n  \"required\": [\n    \"vehiculo_buscado\",\n    \"caracteristicas\",\n    \"presupuesto_importe\",\n    \"presupuesto_moneda\",\n    \"presupuesto_alcance\",\n    \"tiene_usado\",\n    \"decision_entrega_usado\",\n    \"usado_detalle\",\n    \"plazo_compra\",\n    \"necesita_financiacion\",\n    \"resumen_consulta\",\n    \"senales_score\"\n  ]\n}",
+        "options": {
+          "systemPromptTemplate": "Extraé solamente información explícita del mensaje del cliente. Si un dato no aparece explícitamente, devolvelo como null (o lista vacía en \"caracteristicas\"). No consultes ni inventes stock, precios o disponibilidad. No deduzcas datos que el cliente no mencionó.\n\nEl campo \"tiene_usado\" indica si el cliente confirma que ofrece un vehículo como parte de pago; NO indica si simplemente posee un auto.\n- true: confirma que entrega u ofrece su vehículo como parte de pago.\n- false: declara explícitamente que no entrega ningún vehículo.\n- null: no lo menciona, expresa una posibilidad o todavía no decidió.\nNo conviertas una intención dudosa en una confirmación.\n\nEjemplos para \"tiene_usado\":\n- \"Tengo un Focus 2016 para entregar\" -> true.\n- \"Tengo auto, pero no lo voy a entregar\" -> false.\n- \"Capaz entregue mi auto, todavía no sé\" -> null.\n- \"Tengo un Focus 2016\" -> null (puede guardarse el detalle mencionado en \"usado_detalle\", pero no inferir que lo ofrece como parte de pago).\n\nEl campo \"usado_detalle\" solo debe contener características concretas del vehículo (marca, modelo, año, versión, kilometraje, etc.) que el cliente haya mencionado de forma explícita. Debe quedar null cuando el cliente solo dice \"mi auto\", \"un auto\" o \"mi vehículo\" sin características concretas. Conservá los detalles explícitos cuando existan. No completes ni deduzcas datos faltantes.\n\nEjemplos para \"usado_detalle\":\n- \"Entrego mi auto\" -> null.\n- \"Tengo un auto para entregar\" -> null.\n- \"Entrego mi vehículo\" -> null.\n- \"Entrego un Focus 2016\" -> \"Focus 2016\".\n\nCONTEXTO CONVERSACIONAL: la entrada contiene un historial con líneas \"Cliente:\" y \"Bot:\", seguido del último mensaje del cliente.\n- Extraé los datos declarados por el cliente, tanto en el historial como en el último mensaje.\n- Las preguntas y los textos del Bot aportan contexto para interpretar las respuestas, pero NO confirman datos: nunca tomes un dato solo porque el Bot lo mencionó o lo insinuó.\n- Conservá la información anterior que el cliente no haya corregido.\n- Ante una corrección explícita del cliente, usá lo último que declaró.\n- Mantener incertidumbre y condiciones: si el cliente expresa una posibilidad o una condición, no la conviertas en una decisión confirmada (por ejemplo, \"tiene_usado\" sigue en null mientras no confirme que entrega el vehículo).\n- Una respuesta breve del cliente puede completar la pregunta del Bot (por ejemplo, \"En dólares\" responde la moneda y se normaliza a \"USD\").\n\nMONEDA: \"presupuesto_moneda\" solo admite \"ARS\", \"USD\" o null.\n- Normalizá dólares estadounidenses (\"dólares\", \"USD\", \"u$s\", \"U$D\", \"dolares\") a \"USD\".\n- Normalizá pesos argentinos (\"pesos\", \"ARS\") a \"ARS\".\n- No deduzcas la moneda a partir de un símbolo \"$\" aislado: si solo aparece \"$\" sin aclarar la moneda, devolvé null.\n- Si el cliente nombra otra moneda o la moneda no es clara, devolvé null.\n- Si el cliente corrige la moneda, usá la última que declaró.\n\nDECISIÓN SOBRE LA ENTREGA DEL USADO: \"decision_entrega_usado\" es obligatorio y solo admite estos valores:\n- \"confirmada\": el cliente confirma que ofrece un vehículo como parte de pago.\n- \"descartada\": el cliente declara que no entrega ningún vehículo.\n- \"indecisa\": el cliente expresa duda, una posibilidad o dice que aún no decidió.\n- \"no_informada\": el cliente no expresa ninguna decisión sobre la entrega.\nCoherencia obligatoria con \"tiene_usado\": confirmada -> true; descartada -> false; indecisa o no_informada -> null.\nSi el cliente corrige su decisión durante la conversación, prevalece la decisión más reciente del cliente.\nEjemplos de \"decision_entrega_usado\":\n- \"Entrego mi Focus 2016\" -> \"confirmada\" (tiene_usado true).\n- \"No pienso entregar ningún auto\" -> \"descartada\" (tiene_usado false).\n- \"Capaz entregue mi auto, todavía no sé\" -> \"indecisa\" (tiene_usado null).\n- \"Todavía no decidí si entregarlo\" -> \"indecisa\" (tiene_usado null).\n- El cliente no menciona nada sobre un usado -> \"no_informada\" (tiene_usado null).\n- Dijo \"capaz entrego mi auto\" y luego \"sí, lo entrego\" -> \"confirmada\" (tiene_usado true).\n\nRESUMEN DE LA CONSULTA: \"resumen_consulta\" es obligatorio. Es un texto en español, de máximo 500 caracteres, que resume la búsqueda del cliente usando exclusivamente lo que el cliente declaró en el historial y en el último mensaje.\n- Incluí los datos conocidos: vehículo o características buscadas, presupuesto y moneda, entrega de usado, plazo de compra y financiación. Omití los datos desconocidos o indicá brevemente que no fueron informados.\n- Diferenciá presupuesto total de dinero para agregar, según \"presupuesto_alcance\".\n- Si el dinero disponible depende de entregar un usado, explicitalo en el resumen.\n- Preservá las dudas y condiciones: no presentes una entrega indecisa como confirmada.\n- No inventes datos, stock, precios ni promesas comerciales.\n- No interpretes las preguntas ni los textos del Bot como declaraciones del cliente.\n- Mantenelo coherente con los demás campos extraídos.\nEjemplo: \"Busca un vehículo automático. Dispone de 10000 USD para agregar si entrega su auto, pero aún no decidió si lo entregará. Quiere comprar el mes que viene y no necesita financiación.\"\n\nSEÑALES PARA EL SCORE: \"senales_score\" es obligatorio y todos sus campos son obligatorios. Se extrae exclusivamente de declaraciones del cliente en el historial y en el último mensaje.\n- Las evidencias son fragmentos literales de lo que escribió el cliente (historial o último mensaje). Nunca cites preguntas o textos del Bot, ejemplos de este prompt ni \"resumen_consulta\".\n- Sin evidencia, devolvé una lista vacía.\n- Conservá negaciones, dudas y condiciones dentro de los fragmentos citados.\n- Ante una corrección del cliente, usá la declaración vigente y no cites la retractada como vigente.\n\"plazo_categoria\" (con \"plazo_evidencias\"):\n- \"hasta_7_dias\": plazo de hasta 7 días (por ejemplo, \"en 5 días\").\n- \"de_8_a_30_dias\": entre 8 y 30 días (por ejemplo, \"dentro de dos semanas\").\n- \"de_31_a_90_dias\": entre 31 y 90 días (por ejemplo, \"en dos meses\").\n- \"mas_de_90_dias\": más de 90 días.\n- \"sin_definir\": el cliente dice que no tiene fecha definida.\n- \"ambiguo\": por ahora, expresiones como \"este mes\", \"el mes que viene\" y \"cuanto antes\" van siempre como \"ambiguo\"; su normalización temporal se definirá después.\n- \"no_informado\": no menciona plazo.\n\"intencion_categoria\" (con \"intencion_evidencias\"):\n- \"reserva_compra\": quiere reservar o iniciar concretamente la compra.\n- \"visita_prueba\": pide coordinar una visita o una prueba de manejo.\n- \"propuesta_concreta\": solicita una propuesta personalizada para su caso.\n- \"consulta_general\": solo pide información o declara que está averiguando.\n- \"no_informada\": no hay una intención clasificable.\nSi hay varias intenciones vigentes, elegí en este orden: reserva_compra, visita_prueba, propuesta_concreta, consulta_general. No conserves una intención que el cliente haya retractado. Preguntar qué significa reservar no equivale a querer reservar.\n\"busqueda_evidencias\": fragmentos literales del cliente sobre el vehículo o las características que busca.\n\"presupuesto_evidencias\": fragmentos literales del cliente sobre su presupuesto. Conservá las condiciones, especialmente cuando el dinero para agregar depende de entregar un usado.\nNo agregues puntos ni totales."
+        }
+      },
+      "id": "a48132f4-8273-437e-997e-c59da8d62be7",
+      "name": "Extraer datos de la consulta",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        2480,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-6.1-terra"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "b2c86abe-23b8-4436-9543-2b7f4882be94",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2480,
+        416
+      ]
+    },
+    {
+      "id": "31809b9c-a791-4eed-9b8a-6ac92ad6347b",
+      "name": "Guardar resumen de la oportunidad",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2690,
+        176
       ],
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (phoneId !== 'META_PHONE_NUMBER_ID') continue;\n  for (const update of event.statuses ?? []) {\n    output.push({\n      json: { message_id: update.id, phone_number_id: phoneId, status: update.status },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/save_bot_lead_summary",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { p_conversation_id: $('Mensaje registrado').item.json.conversation_id, p_message_id: $('Mensaje registrado').item.json.message_id, p_summary: $json.output.resumen_consulta } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
       }
+    },
+    {
+      "id": "b2c290e4-b369-4c8d-b488-d449e8aa3aa9",
+      "name": "¿Resumen vigente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2890,
+        176
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body?.length === 1 && ['applied', 'unchanged'].includes($json.body[0]?.outcome) && $json.body[0]?.source_message_id === $('Mensaje registrado').item.json.message_id }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "8106e542-9fa1-486d-a0eb-a12ba692871a",
+      "name": "Leer estado vigente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3072,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const datos = $('Extraer datos de la consulta').item.json.output;\nconst estado = $json.body?.[0];\nif (estado?.lead_id !== \"DEMO_OPORTUNIDAD_UUID\" || estado?.conversation_id !== \"DEMO_CONVERSACION_UUID\") throw new Error('Estado ajeno a la demo');\nif (!estado || !['collecting','waiting_assignment','handed_off','stopped'].includes(estado.bot_state)) throw new Error('Estado de conversación inválido');\n\nif (datos === null || typeof datos !== \"object\" || Array.isArray(datos)) {\n  throw new Error(\"No hay datos extraidos en $json.output: se esperaba un objeto del extractor.\");\n}\n\nconst decisionesValidas = [\"confirmada\", \"descartada\", \"indecisa\", \"no_informada\"];\nconst decision = datos.decision_entrega_usado;\nif (!decisionesValidas.includes(decision)) {\n  throw new Error(\"decision_entrega_usado invalida: se esperaba confirmada, descartada, indecisa o no_informada (valor recibido: \" + JSON.stringify(decision) + \").\");\n}\nconst usadoEsperado = decision === \"confirmada\" ? true : (decision === \"descartada\" ? false : null);\nif (datos.tiene_usado !== usadoEsperado) {\n  throw new Error(\"Inconsistencia: decision_entrega_usado=\" + decision + \" requiere tiene_usado=\" + JSON.stringify(usadoEsperado) + \" (valor recibido: \" + JSON.stringify(datos.tiene_usado) + \").\");\n}\n\nconst cupos = estado.reserved_slots;\nif (typeof cupos !== \"number\" || !Number.isInteger(cupos) || cupos < 0 || cupos > 3) {\n  throw new Error(\"reserved_slots invalido: debe ser un entero entre 0 y 3 (valor recibido: \" + JSON.stringify(cupos) + \").\");\n}\n\nconst faltante = (v) => v === null || v === undefined || (typeof v === \"string\" && v.trim() === \"\");\n\nconst CIERRE = \"Gracias por la información. Un asesor de Pelucars va a contactarte para continuar con tu búsqueda.\";\n\nlet accion;\nlet motivo;\nlet respuesta = null;\n\nif (estado.bot_state !== 'collecting' || cupos === 3) {\n  accion = \"no_responder\";\n  motivo = \"La conversación no admite otra reserva.\";\n} else if (cupos === 2) {\n  accion = \"cerrar\";\n  motivo = \"Se reservaron 2 cupos: corresponde cerrar y derivar a un asesor.\";\n  respuesta = CIERRE;\n} else {\n  const caracteristicas = Array.isArray(datos.caracteristicas) ? datos.caracteristicas : [];\n\n  if (faltante(datos.vehiculo_buscado) && caracteristicas.length === 0) {\n    // A. Busqueda\n    accion = \"preguntar\";\n    motivo = \"Falta saber que vehiculo o caracteristicas busca.\";\n    respuesta = \"¡Hola! ¿Qué vehículo o qué características estás buscando?\";\n  } else {\n    // B. Presupuesto (maximo dos aclaraciones)\n    const faltantesPresupuesto = [];\n    if (faltante(datos.presupuesto_importe)) faltantesPresupuesto.push({ campo: \"importe\", texto: \"¿cuál es el importe de tu presupuesto?\" });\n    if (faltante(datos.presupuesto_moneda)) faltantesPresupuesto.push({ campo: \"moneda\", texto: \"¿en qué moneda?\" });\n    if (faltante(datos.presupuesto_alcance)) faltantesPresupuesto.push({ campo: \"alcance\", texto: \"¿ese monto es el valor total del vehículo o el dinero que podés agregar?\" });\n    const aPreguntar = faltantesPresupuesto.slice(0, 2);\n\n    // C. Entrega de usado\n    let preguntaUsado = null;\n    let motivoUsado = null;\n    if (decision === \"no_informada\") {\n      preguntaUsado = \"¿Tenés decidido entregar un vehículo como parte de pago?\";\n      motivoUsado = \"El cliente no informo ninguna decision sobre la entrega de un vehiculo como parte de pago.\";\n    } else if (decision === \"confirmada\" && faltante(datos.usado_detalle)) {\n      preguntaUsado = \"¿Podés indicarme marca, modelo y año del vehículo que entregarías?\";\n      motivoUsado = \"Entrega un usado pero falta el detalle (marca, modelo y año).\";\n    }\n\n    // D. Plazo y financiacion\n    const faltantesPlazo = [];\n    if (faltante(datos.plazo_compra)) faltantesPlazo.push({ campo: \"plazo_compra\", texto: \"¿para cuándo pensás concretar la compra?\" });\n    if (datos.necesita_financiacion === null || datos.necesita_financiacion === undefined) faltantesPlazo.push({ campo: \"necesita_financiacion\", texto: \"¿necesitás financiación?\" });\n\n    if (aPreguntar.length > 0) {\n      accion = \"preguntar\";\n      motivo = \"Presupuesto incompleto. Falta: \" + faltantesPresupuesto.map((f) => f.campo).join(\", \") + \". Se preguntan como maximo dos.\";\n      respuesta = \"Para orientarte mejor, \" + aPreguntar.map((f) => f.texto).join(\" Y \") ;\n    } else if (preguntaUsado !== null) {\n      accion = \"preguntar\";\n      motivo = motivoUsado;\n      respuesta = preguntaUsado;\n    } else if (faltantesPlazo.length > 0) {\n      accion = \"preguntar\";\n      motivo = \"Faltan datos de plazo o financiacion: \" + faltantesPlazo.map((f) => f.campo).join(\", \") + \".\";\n      respuesta = faltantesPlazo.map((f) => f.texto).join(\" Y \");\n    } else {\n      accion = \"cerrar\";\n      motivo = \"Todos los grupos de informacion estan respondidos.\";\n      respuesta = CIERRE;\n    }\n  }\n}\n\nreturn {\n  json: {\n    ...datos,\n    reserved_slots: cupos,\n    bot_state: estado.bot_state,\n    message_id: $('Mensaje registrado').item.json.message_id,\n    reply_kind: accion === 'preguntar' ? 'question' : accion === 'cerrar' ? 'closing' : null,\n    accion,\n    motivo,\n    respuesta_propuesta: respuesta,\n  },\n};"
+      },
+      "id": "93631bb0-ded3-4375-a38a-6baf7a79c7f0",
+      "name": "Decidir con los cupos actuales",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3328,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.reply_kind !== null }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "32dba660-d859-496b-815c-33f77685f9bc",
+      "name": "¿Reservar respuesta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3552,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/reserve_bot_reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_conversation_id:\"DEMO_CONVERSACION_UUID\",p_reply_to:$json.message_id,p_body:$json.respuesta_propuesta,p_reply_kind:$json.reply_kind,p_expected_reserved_slots:$json.reserved_slots} }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "f902bf64-09bc-4a02-b791-0738abe56110",
+      "name": "Reservar respuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3952,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const {statusCode,body}=$json;\nif (statusCode>=200 && statusCode<300) return {json:{kind:'reserved',body}};\nif (statusCode===409 && body?.code==='PT409') return {json:{kind:'stale'}};\nif (body?.code==='22023' && body.message==='Reply content or kind conflict') return {json:{kind:'existing'}};\nthrow new Error('Reserva rechazada: '+statusCode+' '+(body?.code??''));"
+      },
+      "id": "d976954f-c286-4b2b-bbe6-908244616180",
+      "name": "Comprobar reserva",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4192,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.kind === 'reserved' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3add2ede-4577-4c3b-bda3-67f7c212d118",
+      "name": "¿Reserva confirmada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4432,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,conversation_id,reply_to,sender_kind,reply_kind,body,bot_slot,send_state"
+            },
+            {
+              "name": "conversation_id",
+              "value": "eq.DEMO_CONVERSACION_UUID"
+            },
+            {
+              "name": "reply_to",
+              "value": "={{ 'eq.'+$('Mensaje registrado').item.json.message_id }}"
+            },
+            {
+              "name": "sender_kind",
+              "value": "eq.bot"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "f0f95115-860a-4782-af64-ca8029ea6df9",
+      "name": "Releer reserva del entrante",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4448,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "if (!Array.isArray($json.body) || $json.body.length>1) throw new Error('Reserva previa inválida');\nif (!$json.body.length && $('Comprobar reserva').item.json.kind !== 'stale') throw new Error('Conflicto sin reserva recuperable');\nreturn {json:{body:$json.body}};"
+      },
+      "id": "cdb3b982-dd22-4625-8269-4c57d9716cb0",
+      "name": "Evaluar conflicto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4688,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.length === 1 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fd6f23be-f58c-4335-86b2-71d4366e60b9",
+      "name": "¿Recuperó la reserva?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4928,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const row=Array.isArray($json.body)?$json.body[0]:$json.body;\nif (!row?.id || row.conversation_id!==\"DEMO_CONVERSACION_UUID\" || row.reply_to!==$('Mensaje registrado').item.json.message_id || row.sender_kind!=='bot' || !row.body?.trim() || !['question','closing'].includes(row.reply_kind) || !Number.isInteger(row.bot_slot) || row.bot_slot<1 || row.bot_slot>3 || (row.bot_slot===3 && row.reply_kind!=='closing')) throw new Error('Reserva no verificable');\nreturn {json:row};"
+      },
+      "id": "75eea430-0ba2-4be4-80a8-a9fda3ad4b29",
+      "name": "Respuesta persistida",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4272,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/claim_bot_reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_conversation_id:\"DEMO_CONVERSACION_UUID\",p_message_id:$json.id} }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "b9d8bf0f-2fec-4deb-a78a-afb81678ef7f",
+      "name": "Tomar envío",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4528,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const r=$json.body?.[0];\nif ($json.body?.length!==1 || r?.message_id!==$('Respuesta persistida').item.json.id || typeof r.claimed!=='boolean' || (r.claimed && r.send_state!=='sending')) throw new Error('Toma no verificable');\nreturn {json:{claimed:r.claimed}};"
+      },
+      "id": "41d5bcd8-029a-49fc-a6f1-c88114100a71",
+      "name": "Comprobar toma",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4768,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.claimed === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6cb764a5-588a-4451-9a55-3e288769b817",
+      "name": "¿Tomó el envío?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5008,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "phoneNumberId": "META_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "DEMO_DESTINATARIO_META",
+        "messageType": "text",
+        "textBody": "={{ $('Respuesta persistida').item.json.body }}"
+      },
+      "id": "14cb83f2-5885-4988-bb78-1b6b29e8bc92",
+      "name": "Enviar texto por WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        5248,
+        -144
+      ],
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const reply = $('Respuesta persistida').item.json;\nconst messages = $json.messages;\nconst id = Array.isArray(messages) && messages.length === 1 ? messages[0]?.id : null;\nconst error = $json.error;\nconst response = error?.errorResponse ?? error?.response;\nconst graphError = response?.body?.error ?? response?.data?.error;\nconst status = Number(error?.httpCode ?? response?.statusCode ?? response?.status);\nconst accepted = !error && $json.messaging_product === 'whatsapp'\n  && typeof id === 'string' && /^wamid\\.\\S+$/.test(id);\nconst rejected = [400, 401, 403, 404].includes(status)\n  && Number.isInteger(graphError?.code) && graphError.is_transient !== true;\nconst result = {\n  p_conversation_id: reply.conversation_id,\n  p_message_id: reply.id,\n  p_state: accepted ? 'sent' : rejected ? 'failed' : 'unknown',\n};\nif (accepted) result.p_provider_message_id = id;\nreturn {json:result};"
+      },
+      "id": "23f069a1-2449-4c8d-b264-45b744988691",
+      "name": "Interpretar resultado de Meta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5488,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/record_bot_reply_result",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "317a492f-e88f-45ce-95d9-7cca50d31590",
+      "name": "Registrar resultado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5728,
+        -144
+      ]
     }
   ],
   "connections": {
@@ -66,10 +766,458 @@
           }
         ]
       ]
+    },
+    "Mensajes entrantes": {
+      "main": [
+        [
+          {
+            "node": "Habilitar integración demo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Habilitar integración demo": {
+      "main": [
+        [
+          {
+            "node": "Procesar cada mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar cada mensaje": {
+      "main": [
+        null,
+        [
+          {
+            "node": "Guardar entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar entrada": {
+      "main": [
+        [
+          {
+            "node": "Mensaje registrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje registrado": {
+      "main": [
+        [
+          {
+            "node": "Buscar respuesta original",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar respuesta original": {
+      "main": [
+        [
+          {
+            "node": "¿Existe reserva?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Existe reserva?": {
+      "main": [
+        [
+          {
+            "node": "Respuesta persistida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Leer historial anterior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer historial anterior": {
+      "main": [
+        [
+          {
+            "node": "Preparar contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar contexto": {
+      "main": [
+        [
+          {
+            "node": "Extraer datos de la consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extraer datos de la consulta",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer datos de la consulta": {
+      "main": [
+        [
+          {
+            "node": "Guardar resumen de la oportunidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer estado vigente": {
+      "main": [
+        [
+          {
+            "node": "Decidir con los cupos actuales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decidir con los cupos actuales": {
+      "main": [
+        [
+          {
+            "node": "¿Reservar respuesta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Reservar respuesta?": {
+      "main": [
+        [
+          {
+            "node": "Reservar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Procesar cada mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reservar respuesta": {
+      "main": [
+        [
+          {
+            "node": "Comprobar reserva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar reserva": {
+      "main": [
+        [
+          {
+            "node": "¿Reserva confirmada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Reserva confirmada?": {
+      "main": [
+        [
+          {
+            "node": "Respuesta persistida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Releer reserva del entrante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Releer reserva del entrante": {
+      "main": [
+        [
+          {
+            "node": "Evaluar conflicto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar conflicto": {
+      "main": [
+        [
+          {
+            "node": "¿Recuperó la reserva?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Recuperó la reserva?": {
+      "main": [
+        [
+          {
+            "node": "Respuesta persistida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Leer estado vigente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta persistida": {
+      "main": [
+        [
+          {
+            "node": "Tomar envío",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tomar envío": {
+      "main": [
+        [
+          {
+            "node": "Comprobar toma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar toma": {
+      "main": [
+        [
+          {
+            "node": "¿Tomó el envío?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tomó el envío?": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto por WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Procesar cada mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar texto por WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Interpretar resultado de Meta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Interpretar resultado de Meta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interpretar resultado de Meta": {
+      "main": [
+        [
+          {
+            "node": "Registrar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar resultado": {
+      "main": [
+        [
+          {
+            "node": "Procesar cada mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar resumen de la oportunidad": {
+      "main": [
+        [
+          {
+            "node": "¿Resumen vigente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Resumen vigente?": {
+      "main": [
+        [
+          {
+            "node": "Leer estado vigente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Procesar cada mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "nodeGroups": [
+    {
+      "id": "19fddbf9-d8aa-47bc-a976-3bf6a6834165",
+      "name": "Remitente autorizado",
+      "nodeNames": [
+        "Mensajes entrantes",
+        "Habilitar integración demo"
+      ]
+    },
+    {
+      "id": "91f761e8-54d7-4d50-ad70-0eab8875793c",
+      "name": "Persistencia de entrada",
+      "nodeNames": [
+        "Guardar entrada",
+        "Mensaje registrado",
+        "Buscar respuesta original",
+        "¿Existe reserva?"
+      ]
+    },
+    {
+      "id": "9e17ded9-4829-43db-8a13-cb976ae1fa93",
+      "name": "Contexto y extracción",
+      "nodeNames": [
+        "Leer historial anterior",
+        "Preparar contexto",
+        "Extraer datos de la consulta",
+        "OpenAI Chat Model",
+        "Guardar resumen de la oportunidad",
+        "¿Resumen vigente?"
+      ]
+    },
+    {
+      "id": "15e04fe5-c627-4f65-887c-c92f35ebbcb5",
+      "name": "Decisión con cupos",
+      "nodeNames": [
+        "Leer estado vigente",
+        "Decidir con los cupos actuales",
+        "¿Reservar respuesta?"
+      ]
+    },
+    {
+      "id": "e19baf59-b683-4829-818b-3391634709e7",
+      "name": "Reserva de respuesta",
+      "nodeNames": [
+        "Reservar respuesta",
+        "Comprobar reserva",
+        "¿Reserva confirmada?"
+      ]
+    },
+    {
+      "id": "60e2f960-26ec-4543-ab37-5d4995a14d8d",
+      "name": "Conflicto de reserva",
+      "nodeNames": [
+        "Releer reserva del entrante",
+        "Evaluar conflicto",
+        "¿Recuperó la reserva?"
+      ]
+    },
+    {
+      "id": "9c877546-7119-4833-89c9-265b4488e6cb",
+      "name": "Toma exclusiva",
+      "nodeNames": [
+        "Respuesta persistida",
+        "Tomar envío",
+        "Comprobar toma",
+        "¿Tomó el envío?"
+      ]
+    },
+    {
+      "id": "7f8a6059-3a7a-4a92-9404-6d732a5bb12c",
+      "name": "Envío y registro",
+      "nodeNames": [
+        "Enviar texto por WhatsApp",
+        "Interpretar resultado de Meta",
+        "Registrar resultado"
+      ]
+    }
+  ],
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
   "active": false
 }

@@ -1,0 +1,262 @@
+{
+  "name": "Pelucars — Revisión de remitente demo",
+  "nodes": [
+    {
+      "id": "242973dd-15b8-4dd9-a52b-12ff9f4a23ea",
+      "name": "Consulta manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "2a865043-1857-43b9-8032-333cfdc25492",
+      "name": "Clientes y oportunidades",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        250,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/customers",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,phone_e164,leads(id,reference_number,source,commercial_status,assigned_to,created_at)"
+            },
+            {
+              "name": "or",
+              "value": "(phone_e164.in.(+DEMO_REMITENTE_META,+DEMO_DESTINATARIO_META),id.eq.DEMO_CLIENTE_UUID)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "19240174-3a09-482e-a2af-0215f8afc2b6",
+      "name": "Oportunidad propuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        500,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/leads",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id"
+            },
+            {
+              "name": "id",
+              "value": "eq.DEMO_OPORTUNIDAD_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4fab4bf4-98bf-4e43-896e-fe3f6076a069",
+      "name": "Conversación propuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        750,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/conversations",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id"
+            },
+            {
+              "name": "id",
+              "value": "eq.DEMO_CONVERSACION_UUID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "18e701b2-49a4-467e-8831-5b83dcc911bb",
+      "name": "Mensajes de la prueba",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/messages",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,provider_message_id,sender_kind,body,reply_to,reply_kind,bot_slot,send_state,history_position,created_at"
+            },
+            {
+              "name": "conversation_id",
+              "value": "eq.DEMO_CONVERSACION_UUID"
+            },
+            {
+              "name": "order",
+              "value": "created_at.asc,id.asc"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "31d17879-15ec-40da-a932-626303be0be1",
+      "name": "Contadores de la prueba",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/get_bot_conversation",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "p_conversation_id",
+              "value": "DEMO_CONVERSACION_UUID"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Consulta manual": {
+      "main": [
+        [
+          {
+            "node": "Clientes y oportunidades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clientes y oportunidades": {
+      "main": [
+        [
+          {
+            "node": "Oportunidad propuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Oportunidad propuesta": {
+      "main": [
+        [
+          {
+            "node": "Conversación propuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversación propuesta": {
+      "main": [
+        [
+          {
+            "node": "Mensajes de la prueba",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensajes de la prueba": {
+      "main": [
+        [
+          {
+            "node": "Contadores de la prueba",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
