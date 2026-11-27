@@ -27,7 +27,7 @@ El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus id
 - Pendientes adicionales autorizados el 24/11: enlaces Volver reconocibles, interés sin recuadro anidado, paginado innecesario oculto, rótulo Resumen de la consulta y oportunidades por vehículo con acceso por responsable/admin.
 - Cinco estados: Nueva consulta, En seguimiento, Vendido, Perdido y En espera de stock. Este último nombre ya está definido (D14).
 - Ventas registradas explícitamente por responsable/admin, con actualización transaccional de la unidad vendida. El administrador gestiona inventario (D17).
-- El catálogo reside en Supabase y se administra desde el panel; bot sin catálogo, precios ni stock en V1.
+- El catálogo reside en Supabase y se administra desde el panel. Actualización del 27/11: el usuario confirmó dentro del alcance inicial el alta automática de marca/modelo inequívoco desde el bot, sin unidades, stock ni precios; [contrato del incremento posterior a D07](bot-catalogo.md). No habilita ofertas ni respuestas de disponibilidad/precio desde el bot.
 - Separación confirmada el 19/11: ficha por marca/modelo; versión, año, precio y características en cada unidad física. El stock disponible se calcula por unidades, no se edita como cantidad. Datos desconocidos opcionales.
 - Revisión del 20/11: el código interno de unidad se genera en la base (`PEL-<número>`) y no se ingresa ni se modifica en los formularios. Los códigos existentes se conservan. La secuencia puede tener saltos; no representa cantidad de stock. La referencia del sistema externo será independiente y sigue pendiente de definición.
 - Búsqueda del 20/11: marca/modelo al escribir con pausa de 300 ms; stock, catálogo, año y transmisión al cambiar. Año/transmisión y, cuando se pide, disponibilidad deben coincidir en la misma unidad. No se cruzan características de autos diferentes. La búsqueda se realiza en la base antes de paginar.
@@ -67,7 +67,7 @@ El alta de Auth y la inserción de perfil no son una sola transacción. Un fallo
 | D12 | Correos a otros vendedores por pendientes | No incluir sin acuerdo. El correo al asignado es parte del alcance futuro de asignaciones. |
 | D13 | Carga inicial e integración externa | Reunión pendiente; sin importación ni sincronización implícita. |
 | D15 | Devolver oportunidades tras conocer score | Reasignación administrativa como mecanismo confirmado; no agregar devolución automática. |
-| D16 | Granularidad y normalización de catálogo | Confirmada ficha marca/modelo y unidades con versión/año. Implementada deduplicación por mayúsculas y espacios. Consolidación automática de nombres ambiguos e importación siguen pendientes. |
+| D16 | Granularidad y normalización de catálogo | Confirmadas ficha marca/modelo y unidades separadas. Alta inequívoca desde el bot autorizada el 27/11 y preparada en PR posterior a D07, con unicidad por origen/mayúsculas/espacios. Consolidación de aliases/nombres ambiguos e importación siguen pendientes. Sin alta de unidades/stock/precios. |
 | D17 | Anulación/corrección de una venta | Administrar stock está confirmado; faltan trazabilidad, permisos y reversión de venta. No liberar stock por cambiar una etiqueta. |
 | D18 | KPI restantes | Atribución operativa y valores iniciales confirmados arriba; ventas/score y pérdidas individuales siguen pendientes de sus fuentes y reglas. |
 | D19 | Reapertura de cerradas | No admitida por las operaciones actuales; acordar operación y motivo antes de habilitarla. |

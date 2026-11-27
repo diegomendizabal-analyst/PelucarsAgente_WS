@@ -1,5 +1,7 @@
 # Para el chat de n8n — 27/11/2026
 
+Incremento posterior solicitado: [alta automática de catálogo](handoff-catalogo-n8n.md), en otro PR dependiente de D07. Nueva RPC atómica con resolución/evidencia explícitas; no crear unidades ni completar históricos. Las menciones inferiores de “no crea catálogo” describen la RPC anterior, que se conserva compatible.
+
 Actualización posterior: #13/#14/#15 ya integrados en main `2053064`. Para el siguiente incremento funcional leer el [handoff D07](handoff-d07-n8n.md): nueva admisión antes de IA, continuidad por búsqueda, ciclos y pausa fija de 72h. Su migración todavía no está aplicada; no cambiar a esas RPC hasta revisar/aplicar el incremento autorizado. El contrato comercial de este documento se conserva.
 
 PR #13 y #14 siguen abiertos al verificar el 27/11. El usuario ya aplicó las migraciones en Supabase de desarrollo; `00-verificar.sql` devuelve todo true y el panel fue contrastado con PostgREST real. Este chat no aplicó migraciones ni editó workflows.

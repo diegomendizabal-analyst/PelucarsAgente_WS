@@ -1,5 +1,9 @@
 # Continuidad — Reportes, 24/11/2026
 
+## Catálogo desde el bot — incremento posterior a D07
+
+El usuario confirmó el alta automática de marca/modelo inexistente dentro del alcance inicial. Se prepara en `codex/bot-alta-catalogo`, basada en #17 (`f115fb1`, abierto al iniciar); nuevo PR separado, sin #16. [Contrato y pruebas](bot-catalogo.md), [handoff n8n](handoff-catalogo-n8n.md). Alta/vínculo atómicos sólo con identidad inequívoca respaldada por cita literal, reutilización por origen y normalización, concurrencia cubierta por índice único, sin unidades/stock/precios. Migración `20261127155419_bot_catalog_intake.sql` local, no aplicada. No se tocaron workflows, datos remotos, QA3114 ni `wsp/`.
+
 ## D07 — incremento funcional separado, 27/11
 
 #13/#14/#15 están integrados en `origin/main` `2053064`. El checkout principal y QA3114 quedaron en ese commit, conservando `wsp/` y el mismo proceso Next. D07 se prepara en `codex/d07-pausa-72h`, worktree `.pr-work/d07-pausa`; no se incorpora #16 ni se cambia QA.

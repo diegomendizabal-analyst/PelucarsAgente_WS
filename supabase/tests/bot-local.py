@@ -370,7 +370,7 @@ def exercise_score(db, connect):
     print("OK: demo local 50/100, desglose 20+0+15+15, tres citas, reintento concurrente, rollback y RLS")
 
 
-def run(score_only=False, d07_only=False):
+def run(score_only=False, d07_only=False, catalog_only=False):
     # Ignore ambient libpq connection/service settings, including PGSERVICE and PGHOSTADDR.
     for key in list(os.environ):
         if key.startswith("PG"):
@@ -409,6 +409,10 @@ def run(score_only=False, d07_only=False):
                     grant usage on schema auth to anon,authenticated,service_role;""")
                 for migration in sorted((ROOT / "migrations").glob("*.sql")):
                     db.execute(migration.read_text(encoding="utf-8-sig"))
+                if catalog_only:
+                    from bot_catalog import exercise_catalog
+                    exercise_catalog(db, connect, overlap, rows)
+                    return
                 if d07_only:
                     from bot_pause import exercise_d07
                     exercise_d07(db, connect, overlap, rows, expect_error)
@@ -432,5 +436,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--score-only", action="store_true", help="Run only the score persistence checks")
     parser.add_argument("--d07-only", action="store_true", help="Run D07 admission, closure and concurrency checks")
+    parser.add_argument("--catalog-only", action="store_true", help="Run bot catalogue creation/reuse concurrency checks")
     args = parser.parse_args()
-    run(score_only=args.score_only, d07_only=args.d07_only)
+    run(score_only=args.score_only, d07_only=args.d07_only, catalog_only=args.catalog_only)
