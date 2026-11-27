@@ -28,6 +28,15 @@ Se decide con `get_bot_contact_turn.reserved_slots`. El cupo 3 sólo admite cier
 
 Comparar estados y contadores antes y después de cada turno, la ficha, las citas y los resultados reales del envío. Reproducir un evento guardado con **el mismo ID** para verificar deduplicación; un nuevo WhatsApp de igual texto tiene otro ID. Validar por separado un saludo aislado y un cierre temprano con datos completos en contactos/ciclos elegibles. Un nuevo mensaje tras las 72 horas debe abrir un ciclo elegible manteniendo el anterior. Un mensaje silenciado jamás se usa como disparador diferido. No adelantar el reloj remoto. Tras el ensayo, apagar procesamiento y dejar el workflow sin publicar.
 
-**Validación de este cambio.** `node --test n8n/workflows/recepcion-d07.test.mjs` comprueba en local el cableado y las decisiones con ejemplos ficticios. Las pruebas no llaman a n8n, Supabase, Meta ni IA. El recorrido remoto queda pendiente de la migración, los límites y la coordinación del ensayo.
+**Validación de este cambio.** `node --test n8n/workflows/recepcion-d07.test.mjs` comprueba en local el cableado y las decisiones con ejemplos ficticios. Las pruebas no llaman a n8n, Supabase, Meta ni IA. El 27 de noviembre de 2026 se verificó además el intercambio real en modo manual, usando la migración y los límites demo configurados.
+
+## Resultado del ensayo manual
+
+1. La búsqueda del Civic manual de 2019 en adelante produjo la pregunta de presupuesto en el cupo 1. Score de 15 puntos.
+2. El segundo mensaje corrigió la transmisión a automática y agregó USD 18.000 de presupuesto total. Se conservaron la oportunidad, el modelo y el año mínimo. La pregunta por el usado ocupó el cupo 2. Score de 30 puntos.
+3. El tercer mensaje identificó el Gol 2015 como usado, compra en 20 días, sin financiación y con intención de visita. Se guardó el score de 80 puntos con sus evidencias: plazo 20, intención 30, búsqueda 15 y presupuesto 15. Meta aceptó el cierre en el cupo 3 y el participante confirmó la recepción. La ficha quedó en `waiting_assignment` con tres entrantes, tres respuestas y tres envíos confirmados.
+4. El remitente histórico envió una consulta nueva durante su pausa. El ingreso devolvió `created=true` y `paused`; el vencimiento siguió siendo el que ya tenía. Una lectura posterior encontró un entrante adicional en su conversación y las mismas tres reservas y tres envíos confirmados. El workflow terminó antes de tomar el turno, llamar a IA, guardar score o intentar un envío.
+
+Al terminar se verificó el procesamiento apagado y el workflow sin publicar. La reactivación por un mensaje nuevo tras 72 horas y la repetición remota del mismo ID de proveedor quedaron fuera de este intercambio.
 
 [Contrato de integración](../../docs/handoff-d07-n8n.md) · [Semántica, transacciones y pruebas SQL](../../docs/bot-d07.md)
