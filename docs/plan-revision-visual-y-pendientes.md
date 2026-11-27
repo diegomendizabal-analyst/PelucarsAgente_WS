@@ -88,15 +88,16 @@ Antes de cambios masivos: registrar hallazgos por pantalla, proponer patrones co
 
 ## Incidencia de scroll en la ficha nueva — 27/11/2026
 
-**Reporte del usuario:** al colocar el puntero sobre el chat no puede seguir desplazando la ficha. La oportunidad nueva del ensayo ya fue creada; sus datos/resultados todavía deben cotejarse en QA. No publicar en este documento identificadores de registros ni datos personales.
+**Estado actualizado tras QA:** defecto reproducido y corregido en #14. El ensayo nuevo ya fue contrastado contra PostgREST; no publicar aquí identificadores de registros, capturas con datos personales ni IDs de Meta.
 
-**Evidencia de código, no reproducción de navegador:** en #14, commit ee009eac53e052ec9d55668dc7fe863fd18fe8be, `frontend/src/app/crm.css:130` define `.op-chat-scroll` con `max-height:min(560px,65dvh)`, `overflow:auto` y `overscroll-behavior:contain`. Esta última regla impide transferir el desplazamiento a la página al alcanzar los extremos del contenedor y es compatible con el síntoma reportado. No demuestra por sí sola que el scroll interno también esté averiado.
+**Evidencia de navegador:** en QA 3114, a 1440/390 px los dos mensajes cabían completos y aun así `contain` retenía la rueda; a 320 px había 30 px de scroll interno y la página también se detenía en sus extremos. Se cambió únicamente a `overscroll-behavior:auto`. Con pasos de rueda de 120 y 24 px la página vuelve a desplazarse. En chat largo hidratado de 53 mensajes se conservaron carga de anteriores, IDs/orden y anclaje menor a 2 px. Entrada por Chrome DevTools Protocol: no equivale a una prueba con trackpad físico ni Safari/iOS.
 
-- [ ] Reproducir en QA 3114: conversación corta y larga, puntero sobre burbuja/fondo, comienzo/final del chat y página, rueda/trackpad, teclado y gesto táctil.
-- [ ] En los extremos del chat debe poder continuar el desplazamiento de la ficha sin mover obligatoriamente el mouse fuera del bloque. Si no existe desbordamiento interno, el área no debe sentirse bloqueada.
-- [ ] Verificar si basta ajustar la política de overscroll; no agregar listeners que cancelen wheel/touch ni bloquear el scroll del documento.
-- [ ] Conservar orden, cursor de carga de anteriores y anclaje de lectura. No quitar overflow-anchor ni la lógica de anclaje indiscriminadamente para arreglar otra propiedad.
-- [ ] Si se reproduce, corregirlo como defecto de navegación en **#14 antes de integrarlo**, con prueba focalizada. Este plan conserva el seguimiento; no exige esperar la reestructuración visual general.
+- [x] Reproducir con rueda en QA 3114: conversación corta y larga, comienzo/final e interior del chat; a 1440/390/320 px.
+- [x] Permitir continuar el desplazamiento de la ficha en los extremos y cuando no existe desborde interno.
+- [x] Ajustar sólo overscroll; sin listeners que cancelen wheel/touch ni bloqueo del documento.
+- [x] Conservar orden, cursor y anclaje; no cambiar overflow-anchor ni la lógica de paginación.
+- [x] Corregir en **#14**, con prueba focalizada `check-opportunity-ui.mjs --chat-scroll` y regresión hidratada local. No esperar #16 para este defecto.
+- [ ] Ampliar en el recorrido general a hardware táctil/trackpad y otros navegadores disponibles, sin declarar esas verificaciones realizadas.
 - [ ] Evaluar después en #16 la eliminación del scroll interno para chats cortos y un comportamiento consistente para chat, evidencias, notificaciones y otros paneles desplazables.
 
 No hay evidencia de que este comportamiento modifique mensajes, score o persistencia. Su impacto es de navegación/accesibilidad y puede impedir llegar cómodamente al resto de la ficha.
@@ -105,6 +106,25 @@ No hay evidencia de que este comportamiento modifique mensajes, score o persiste
 El usuario sustituyó el ejemplo de Corolla/100 puntos por **Ford Ranger manual desde 2020**, Amarok 2017 para entregar, **USD 12.000 a agregar**, compra en 45 días, financiación e intención de visita. Esperado: **70/100 Alto = 10 + 30 + 15 + 15** y cierre temprano si todos los grupos están completos.
 
 Además de la revisión visual, cotejar que la Ranger figure como búsqueda y la Amarok sólo como usado; el dinero a agregar no sea presentado como precio total ni confirme compatibilidad de presupuesto con stock. La creación de la oportunidad no acredita por sí sola que extracción, score y envío hayan pasado. El ejemplo Corolla anterior se conserva únicamente como caso alternativo documentado, no es el ensayo actual.
+
+**Resultado comprobado desde el panel:** nombre/resumen y campos coinciden con PostgREST; 70/100 Alto (10+30+15+15), cuatro citas literales y dos mensajes en orden. El saliente es `closing` en cupo 1, con estado `sent`, fecha e ID del proveedor. La conversación tiene un cupo y un envío confirmado. No se afirma entrega/lectura ni visita agendada. Ranger permanece sin vínculo porque no se encontró ese modelo en catálogo demo. El dinero a agregar no se usa como precio total. Sin escrituras de prueba ni cambios de cuentas/asignaciones. Sigue pendiente una sesión real de vendedor habilitado/asignado.
+
+### Hallazgos visuales observados en el ensayo, para #16
+
+Recorrido real en Chrome/Next a 1440, 390 y 320 px, con datos del ensayo. No se amplió el rediseño para resolver estas observaciones. Las capturas quedan en el entorno privado del QA; no se suben teléfonos o identidades al repositorio.
+
+| Hallazgo observado | Clasificación / destino | Propuesta verificable para el próximo incremento |
+| --- | --- | --- |
+| La rueda quedaba atrapada sobre el chat, incluso sin desborde interno. | Funcional, corregido ahora en #14. | Conservar regresión de extremos y anclaje; no reintroducir contain en el chat al reorganizarlo. |
+| A 320 px la navegación global, cotización y cuenta ocupan gran parte de la primera pantalla; el resumen queda debajo del encabezado del cliente. | Jerarquía visual, #16. | Revisar estructura global y encabezado juntos; acercar resumen y score sin ocultar estado, identidad o errores. |
+| En escritorio, el formulario de gestión completo ocupa casi toda la columna derecha antes del chat; en móvil la gestión ya está plegada. | Densidad visual, #16. | Proponer acciones separadas Asignar/Cambiar estado; conservar validación, motivo y permisos. |
+| Vehículo buscado repite Ford Ranger en título y marca/modelo, y manual/2020 en campos y características. | Redundancia visual, #16. | Agrupar atributos sin perder búsqueda original ni editar los valores persistidos; no extraer datos del resumen. |
+| El presupuesto aparece primero como “Hasta USD 12.000”; “Dinero a agregar” y la aclaración se leen en líneas posteriores. | Jerarquía visual, #16; el dato y alcance actuales son correctos. | Presentar monto y alcance juntos, manteniendo la distinción con valor total y los datos parciales. |
+| El score abierto en escritorio se superpone a resumen/gestión; el cierre se hace desde el mismo resumen del desplegable. Motivos muestran códigos como plazo_categoria. | Usabilidad/presentación, #16; apertura por teclado ya funciona. | Evaluar panel adaptable con cierre visible y foco claro; traducir motivos en presentación, conservar citas y versión técnica. |
+| El chat de dos mensajes tiene título, explicación de orden, explicación de actualización y una franja de inicio antes de las burbujas; a 320 px aparece un scroll interno de sólo 30 px. | Densidad visual, #16. | Reducir introducciones y evaluar altura natural para chats cortos, manteniendo límite y carga progresiva en largos. |
+| El historial operativo permanece abierto y ocupa otra tarjeta aunque haya un único evento. | Jerarquía visual, #16. | Evaluar desplegable inicial conservando eventos y paginación, separado de la conversación. |
+
+No se detectó desborde horizontal en las tres anchuras. Las observaciones estéticas no cambian score, reglas, permisos, atribución comercial ni persistencia. D07 sigue como incremento funcional separado.
 
 ## Correcciones propuestas para la ficha
 
