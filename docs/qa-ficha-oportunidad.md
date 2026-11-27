@@ -1,6 +1,21 @@
 # QA de ficha de oportunidad — 27/11/2026
 
-PR existente: [#14](https://github.com/diegomendizabal-analyst/PelucarsAgente_WS/pull/14), dependiente de [#13](https://github.com/diegomendizabal-analyst/PelucarsAgente_WS/pull/13). Ambos seguían abiertos al consultar GitHub; `origin/main` b090581 no incluye esas ramas. Se hizo fetch antes de comenzar.
+PR existente: [#14](https://github.com/diegomendizabal-analyst/PelucarsAgente_WS/pull/14). En la comprobación posterior del 27/11, [#13](https://github.com/diegomendizabal-analyst/PelucarsAgente_WS/pull/13) ya está integrado en `origin/main` ca40789; #14 y #15 siguen abiertos y ambos apuntan a main. Se volvió a hacer fetch. El corte anterior b090581 precedía a ese merge.
+
+## Cierre funcional pendiente y ensayo nuevo
+
+Prioridad acordada: completar el ensayo coordinado de #14/#15 antes de la reestructuración general del plan #16. No continuar ajustes estéticos generales en #14. El usuario cerró voluntariamente el puerto 3000; no es un incidente. QA 3114 sigue siendo la instancia a utilizar.
+
+- La ficha histórica de OP-000063 ya pasó el contraste real detallado abajo. El control focalizado posterior volvió a comprobar ficha, campos, score/citas y mensajes contra PostgREST; no se repitieron las suites completas.
+- Falta la referencia de la oportunidad demo nueva preparada por el chat de n8n y su ejecución terminada. No considerar el ensayo completado por preparar el mensaje.
+- El caso coordinado reemplaza el ejemplo anterior del plan: **Ford Ranger manual desde 2020**, Volkswagen Amarok 2017 para entregar, **USD 12.000 a agregar**, plazo 45 días, financiación requerida e intención de visita. Resultado esperado si la extracción conserva lo declarado: **70/100 Alto = plazo 10 + intención 30 + búsqueda 15 + presupuesto 15**.
+- Contrastar nombre según contrato, búsqueda/atributos reales, presupuesto y alcance, plazo, usado/detalles, financiación, resumen, score/desglose y citas literales. La Ranger buscada no debe confundirse con la Amarok entregada. Dinero a agregar no permite afirmar compatibilidad de precio total con una unidad.
+- Cotejar conversación y estado de envío real. Se esperan un entrante y un cierre en primer cupo si el workflow confirma ese recorrido; aceptación del proveedor no prueba entrega o lectura. Conservar errores o incertidumbre sin completar datos para forzar el resultado.
+- Corregir un eventual fallo funcional en el PR responsable y repetir sólo la comprobación afectada. No editar workflows desde el trabajo del panel ni reenviar mensajes para ocultar fallos.
+- Sesión real de vendedor habilitado/asignado: pendiente de entorno. Mantener esa limitación explícita si no hay sesión disponible; no habilitar cuentas ni reasignar oportunidades para probar. Las pruebas SQL existentes de esos permisos ya pasaron.
+- Antes de integrar: registrar resultado del nuevo ensayo, revisar diff de #14 contra main, atender hallazgos funcionales y comprobar el estado de revisión/CI sin inferir CI verde de las pruebas locales. GitHub marcó #14 integrable; #15 no integrable en esta consulta y requiere revisión por su responsable. Este documento no autoriza merge.
+
+**D07 después del ensayo:** decisión funcional aprobada, implementación pendiente en otro PR funcional, separado de #14/#16. Se leyó la [decisión completa](https://app.notion.com/p/425b6a1d71a48148a19adacf591e1d6d) y el [contrato técnico pendiente](https://app.notion.com/p/425b6a1d71a481089b99d407f6bd64f9). Preparar contrato atómico, migración incremental, pruebas locales con reloj controlado y handoff a n8n. Pausa fija de 72 horas por contacto/número comercial desde cierre incluso temprano; guardar mensajes sin IA/envíos/altas durante la pausa, sin prorrogarla. Otro ciclo sólo ante un mensaje posterior elegible, con historial/cupos anteriores intactos y sin elusión por otra oportunidad. Misma búsqueda abierta continúa; cambio de preferencia conserva intereses anteriores. Alta manual, actividades y avisos nuevos quedan fuera. No aplicar SQL remoto ni desplegar automáticamente.
 
 ## Versión navegable
 
