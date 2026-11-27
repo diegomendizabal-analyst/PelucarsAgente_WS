@@ -23,7 +23,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const result = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  if (event.field !== 'messages' || event.metadata?.phone_number_id !== 'META_PHONE_NUMBER_ID') continue;\n  for (const m of event.messages ?? []) {\n    const body = m.type === 'text' ? m.text?.body : ['image', 'video', 'document'].includes(m.type) ? m[m.type]?.caption : null;\n    if (m.from !== 'DEMO_REMITENTE_META' || !m.id?.trim() || typeof body !== 'string' || !body.trim()) continue;\n    const contact = (event.contacts ?? []).find(c => c.wa_id === m.from);\n    const provider_profile_name = typeof contact?.profile?.name === 'string' ? contact.profile.name.trim() || null : null;\n    result.push({json:{message_id:m.id, from:m.from, phone_number_id:event.metadata.phone_number_id, text:body, provider_profile_name}, pairedItem:{item:index}});\n  }\n}\nreturn result;"
+        "jsCode": "// Cada ruta vincula los formatos admitidos por Meta con una única identidad D07.\nconst routes = [\n  { sender: 'DEMO_REMITENTE_META', meta: 'DEMO_DESTINATARIO_META_SIN_MAS', silenceOnly: true },\n  { sender: 'DEMO_REMITENTE_NUEVO', meta: 'DEMO_DESTINATARIO_NUEVO_SIN_MAS', silenceOnly: false },\n];\nconst result = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  if (event.field !== 'messages' || event.metadata?.phone_number_id !== 'META_PHONE_NUMBER_ID') continue;\n  for (const m of event.messages ?? []) {\n    const route = routes.find(r => m.from === r.sender || m.from === r.meta);\n    const body = m.type === 'text' ? m.text?.body : ['image','video','document'].includes(m.type) ? m[m.type]?.caption : null;\n    if (!route || !m.id?.trim() || typeof body !== 'string' || !body.trim()) continue;\n    const contact = (event.contacts ?? []).find(c => c.wa_id === m.from);\n    const name = typeof contact?.profile?.name === 'string' ? contact.profile.name.trim() || null : null;\n    result.push({json:{message_id:m.id, from:route.sender, phone_number_id:event.metadata.phone_number_id,\n      text:body, provider_profile_name:name, silence_only:route.silenceOnly,\n      reply_recipient:route.silenceOnly ? null : '+' + route.meta}, pairedItem:{item:index}});\n  }\n}\nreturn result;"
       },
       "id": "00000000-0000-4000-8000-000000000002",
       "name": "Mensajes entrantes",
@@ -36,7 +36,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (event.field !== 'messages' || phoneId !== 'META_PHONE_NUMBER_ID') continue;\n  for (const update of event.statuses ?? []) {\n    if (update.recipient_id !== 'DEMO_REMITENTE_META' && update.recipient_id !== 'DEMO_DESTINATARIO_META_SIN_MAS') continue;\n    output.push({\n      json: { message_id: update.id, phone_number_id: phoneId, status: update.status },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
+        "jsCode": "const output = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  const phoneId = event.metadata?.phone_number_id;\n  if (event.field !== 'messages' || phoneId !== 'META_PHONE_NUMBER_ID') continue;\n  for (const update of event.statuses ?? []) {\n    if (!['DEMO_REMITENTE_META','DEMO_DESTINATARIO_META_SIN_MAS','DEMO_REMITENTE_NUEVO','DEMO_DESTINATARIO_NUEVO_SIN_MAS'].includes(update.recipient_id)) continue;\n    output.push({\n      json: { message_id: update.id, phone_number_id: phoneId, status: update.status },\n      pairedItem: { item: index }\n    });\n  }\n}\nreturn output;"
       },
       "id": "00000000-0000-4000-8000-000000000003",
       "name": "Notificaciones de estado",
@@ -601,7 +601,7 @@
         "resource": "message",
         "operation": "send",
         "phoneNumberId": "META_PHONE_NUMBER_ID",
-        "recipientPhoneNumber": "DEMO_DESTINATARIO_META",
+        "recipientPhoneNumber": "={{ $('Procesar cada mensaje').item.json.reply_recipient }}",
         "messageType": "text",
         "textBody": "={{ $('Respuesta persistida').item.json.body }}"
       },
@@ -729,7 +729,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const [r] = $json.body ?? [];\nif ($json.body?.length !== 1 || typeof r?.created !== 'boolean' ||\n    !['pending','processing','resolved','paused','review','historical','noncommercial'].includes(r.disposition) ||\n    (!r.receipt_id && r.disposition !== 'historical')) throw new Error('Ingreso D07 inesperado');\nconst event = $('Mensajes entrantes').item.json;\nreturn {json:{...r,phone_e164:'+'+event.from,provider_profile_name:event.provider_profile_name}};"
+        "jsCode": "const [r] = $json.body ?? [];\nif ($json.body?.length !== 1 || typeof r?.created !== 'boolean' ||\n    !['pending','processing','resolved','paused','review','historical','noncommercial'].includes(r.disposition) ||\n    (!r.receipt_id && r.disposition !== 'historical')) throw new Error('Ingreso D07 inesperado');\nconst event = $('Mensajes entrantes').item.json;\nif (typeof event.silence_only !== 'boolean' || (!event.silence_only && !event.reply_recipient))\n  throw new Error('Ruta de prueba no configurada');\nif (event.silence_only && r.created && r.disposition !== 'paused')\n  throw new Error('El remitente de control no quedó en pausa. Conservar el recibo y revisar D07.');\nreturn {json:{...r,phone_e164:'+'+event.from,provider_profile_name:event.provider_profile_name,\n  silence_only:event.silence_only,reply_recipient:event.reply_recipient}};"
       },
       "id": "00000000-0000-4000-8000-000000000036",
       "name": "Comprobar ingreso",
@@ -752,7 +752,7 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.disposition === 'pending' }}",
+              "leftValue": "={{ $json.disposition === 'pending' && $json.silence_only === false }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",

@@ -62,7 +62,7 @@ test('pausa, duplicado procesado y revisión no autorizan IA; tampoco los límit
   const predicate = name => new Function('$json','return '+params(name).conditions.conditions[0].leftValue.slice(3,-2));
   for (const disposition of ['pending','paused','review','historical','processing','resolved','noncommercial']) {
     const r=run('Comprobar ingreso',{body:[{disposition,created:false,receipt_id:'r'}]},
-      {'Mensajes entrantes':{from:'12345678'}});
+      {'Mensajes entrantes':{from:'DEMO_REMITENTE_NUEVO',silence_only:false,reply_recipient:'+DEMO_DESTINATARIO_NUEVO_SIN_MAS'}});
     assert.equal(predicate('¿Pendiente?')(r.json),disposition==='pending');
   }
   for (const reason of ['claimed','busy','earlier_pending','processing_limit','limits_not_configured','resolved','paused']) {
@@ -114,4 +114,24 @@ test('el tercer cupo solo cierra, un cierre anterior silencia y PT409 sin cambio
   assert.deepEqual(outputs('¿Conflicto al resolver?',0),['Conciliar resolución']);
   assert.deepEqual(outputs('Conciliar resolución',0),['Detener por conflicto']);
   assert.deepEqual(outputs('¿Reservar respuesta?',1),['Completar turno sin respuesta']);
+});
+
+test('cada remitente conserva su identidad en lotes mixtos y sólo el nuevo tiene ruta de salida', () => {
+  const source={type:'text',text:{body:'Hola'}};
+  const senders=['DEMO_REMITENTE_META','DEMO_DESTINATARIO_NUEVO_SIN_MAS','DEMO_DESTINATARIO_META_SIN_MAS','DEMO_REMITENTE_NUEVO','otro'];
+  const batch={field:'messages',metadata:{phone_number_id:'META_PHONE_NUMBER_ID'},
+    messages:senders.map((from,i)=>({...source,from,id:'evento-'+i}))};
+  const rows=run('Mensajes entrantes',{}, {},[{json:batch}]).map(r=>r.json);
+  assert.deepEqual(rows.map(r=>r.from),['DEMO_REMITENTE_META','DEMO_REMITENTE_NUEVO','DEMO_REMITENTE_META','DEMO_REMITENTE_NUEVO']);
+  assert.deepEqual(rows.map(r=>r.reply_recipient),[null,'+DEMO_DESTINATARIO_NUEVO_SIN_MAS',null,'+DEMO_DESTINATARIO_NUEVO_SIN_MAS']);
+  const receive=(row,disposition,created)=>run('Comprobar ingreso',
+    {body:[{disposition,created,receipt_id:'r'}]},{'Mensajes entrantes':row}).json;
+  const pending=new Function('$json','return '+params('¿Pendiente?').conditions.conditions[0].leftValue.slice(3,-2));
+  assert.equal(pending(receive(rows[0],'paused',true)),false);
+  assert.equal(pending(receive(rows[0],'pending',false)),false);
+  assert.throws(()=>receive(rows[0],'pending',true),/no quedó en pausa/);
+  const admitted=receive(rows[1],'pending',true);
+  assert.equal(pending(admitted),true);
+  assert.equal(admitted.reply_recipient,rows[1].reply_recipient);
+  assert.equal(params('Enviar texto por WhatsApp').recipientPhoneNumber,"={{ $('Procesar cada mensaje').item.json.reply_recipient }}");
 });
