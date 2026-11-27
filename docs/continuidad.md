@@ -4,7 +4,15 @@
 
 Se actualizó desde origin/main (b090581) antes de implementar. GitHub confirmó #11/#12 mergeados; se conservó wsp/ sin versionar. Primer incremento: [PR #13](https://github.com/diegomendizabal-analyst/PelucarsAgente_WS/pull/13), persistencia comercial con corte, reintentos y protección de ediciones. Segundo incremento: codex/panel-oportunidades-score, dependiente del primero, ficha estructurada, conversación paginada y score vigente por mensaje/versión.
 
-**Migraciones locales pendientes**: 20261127123402_bot_lead_details.sql y 20261127123630_opportunity_bot_read_model.sql. Antes de integrarlas comprobar en otro trabajo autorizado si las migraciones previas de resumen y score están aplicadas; el merge no acredita aplicación. No se aplicó SQL remoto, seed, deploy ni merge, ni se modificó n8n, Meta, hosting, cuentas o datos comerciales remotos.
+**Estado de desarrollo verificado el 27/11**: el usuario aplicó las migraciones de score, datos comerciales y lecturas del panel e informó `00-verificar.sql` con todos los resultados true. Las consultas reales de PostgREST funcionan. Este trabajo no aplicó SQL remoto, seed, deploy ni merge, ni modificó n8n, Meta, hosting, cuentas o datos comerciales remotos.
+
+### Rediseño de la ficha y QA de PR #14
+
+Se volvió a ejecutar fetch de origin y a consultar GitHub: #13 y #14 abiertos, #14 basado en `codex/oportunidades-completas`; main b090581 todavía no contiene esos incrementos. Implementación aislada en `.pr-work/qa-pr14-real`, rama local `codex/ficha-oportunidad-diseno`, destinada a actualizar el mismo #14. El checkout original y `wsp/` se conservaron. Se reutiliza Next en **3114**; el servidor del usuario en **3000** no se detuvo ni reemplazó.
+
+Ficha de prueba: http://127.0.0.1:3114/oportunidades/19f65c2c-a0d1-4e0f-8ee3-fef55f27ca13 — **OP-000063**, cuenta administradora habilitada y Datos demo visibles. Lectura real: nombre de perfil no verificado, presupuesto total USD 20.000, compra dentro de 15 días, sin usado ni financiación, score 50/100 Medio con tres evidencias y seis mensajes. El interés Corolla conserva `vehicle_id`, `requested_brand` y `requested_model` NULL: la extracción histórica no permite vincularlo al catálogo. No completar atributos leyendo el resumen.
+
+Score compacto en el encabezado con detalle accesible; resumen y campos agrupados; gestión a la derecha y desplegable en móvil; conversación en burbujas y orden ascendente por posición confirmada, páginas anteriores con cursor y anclaje de lectura; registros sin posición separados. No se cambiaron reglas, escrituras ni permisos. Pendiente de evaluación, valores sin informar y fallos de lectura son estados distintos. Ver [validación del rediseño](qa-ficha-oportunidad.md).
 
 Diagnóstico, contrato para n8n, pruebas y decisiones agrupadas de ventas: [oportunidades-integracion.md](oportunidades-integracion.md). D07 y asignación de nuevos clientes siguen pendientes. D08 conserva la versión del prototipo. Ventas continúa sin sales ni métricas reales: Notion marca atribución, corrección/anulación y fórmulas como decisiones/propuestas pendientes. No se habilitó un cierre ficticio ni se agregó actividades.
 

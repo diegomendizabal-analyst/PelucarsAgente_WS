@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireAccount, requireAdmin } from "@/lib/auth/session";
 import { createSessionClient } from "@/lib/supabase/server";
 import { leadScoreSchema } from "./score-read";
+import { messagePage, messagePageSize } from "./message-page";
 import { scoreVersion, type BotReadState, type Customer, type Interest, type Lead, type LeadMessage, type PendingLead, type TimelineItem, type UnitMatch } from "./types";
 export const crmPageSize = 20;
 export const crmPage = (value: string | string[] | undefined) => /^\d+$/.test(String(value)) ? Math.max(1, Math.min(100000, Number(value))) : 1;
@@ -52,16 +53,28 @@ function missingMigration(error: { code?: string } | null) {
 function readState(error: { code?: string } | null): BotReadState {
   return !error ? "ready" : missingMigration(error) ? "unavailable" : "error";
 }
-export async function leadBotContext(id: string, messagePage: number) {
+export async function leadMessagePage(id: string, options: {before?:number;cutoff?:number;beforeId?:string;unconfirmed?:boolean} = {}) {
   await requireAccount(); const client = await createSessionClient();
-  const [messages,score] = await Promise.all([
-    client.from("lead_messages").select("id,conversation_id,sender_kind,body,history_position,send_state,created_at,sent_at,provider,bot_state",{count:"exact"})
-      .eq("lead_id",id).order("history_position",{ascending:false,nullsFirst:true}).order("created_at",{ascending:false}).order("id").range((messagePage-1)*crmPageSize,messagePage*crmPageSize-1),
+  let query = client.from("lead_messages").select("id,conversation_id,sender_kind,body,history_position,send_state,created_at,sent_at,provider,bot_state").eq("lead_id",id);
+  if(options.unconfirmed) {
+    query = query.is("history_position",null).order("id",{ascending:false});
+    if(options.beforeId) query = query.lt("id",options.beforeId);
+  } else {
+    query = query.not("history_position","is",null).order("history_position",{ascending:false});
+    if(options.before !== undefined) query = query.lt("history_position",options.before);
+    if(options.cutoff !== undefined) query = query.lte("history_position",options.cutoff);
+  }
+  const result = await query.limit(messagePageSize+1);
+  return messagePage((result.data ?? []) as LeadMessage[],readState(result.error),options.cutoff,options.unconfirmed);
+}
+export async function leadBotContext(id: string) {
+  await requireAccount(); const client = await createSessionClient();
+  const [conversation,unconfirmed,score] = await Promise.all([
+    leadMessagePage(id), leadMessagePage(id,{unconfirmed:true}),
     client.rpc("get_current_lead_score",{p_lead_id:id,p_rules_version:scoreVersion}).maybeSingle(),
   ]);
   const parsed = score.data ? leadScoreSchema.safeParse(score.data) : null;
-  return { messages:(messages.data ?? []) as LeadMessage[], messageCount:messages.count ?? 0,
-    messageState:readState(messages.error), score:parsed?.success ? parsed.data : null,
+  return { conversation, unconfirmed, score:parsed?.success ? parsed.data : null,
     scoreState:parsed && !parsed.success ? "error" as const : readState(score.error) };
 }
 export async function listAssignees() {

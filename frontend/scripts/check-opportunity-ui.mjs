@@ -47,8 +47,8 @@ function loadComponents(scenario) {
     leadContext:async()=>({interests:empty?[]:[interest],events:[],count:41,interestCount:21,error:false,
       matches:[{interest_id:id,available_count:4,matching_count:0,unknown_count:3}],matchState:['error','unavailable'].includes(scenario)?scenario:'ready'}),
     listAssignees:async()=>({rows:[{id,full_name:'Vendedor local',role:'seller'}],error:false}),
-    leadBotContext:async()=>({messages:empty?[]:messages,messageCount:empty?0:42,
-      messageState:['error','unavailable'].includes(scenario)?scenario:'ready',
+    leadBotContext:async()=>({conversation:{messages:empty?[]:messages.filter(m=>m.history_position!==null).reverse(),hasMore:false,before:8,cutoff:8,beforeId:null,state:['error','unavailable'].includes(scenario)?scenario:'ready'},
+      unconfirmed:{messages:empty?[]:messages.filter(m=>m.history_position===null),hasMore:false,before:null,cutoff:null,beforeId:null,state:'ready'},
       scoreState:['error','unavailable'].includes(scenario)?scenario:'ready',score:empty?null:zero?{...score,score:0,result:{...score.result,banda:'baja',desglose:{}}}:score})};
   function load(file) {
     if(cache.has(file))return cache.get(file).exports;
@@ -108,26 +108,34 @@ try {
       assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'),`Overflow ${width} ${scenario}`);
       const text=await evaluate('document.body.innerText');
       assert(!text.includes('Error:'),text.slice(0,300));
-      if(scenario==='empty'){assert(text.includes('Pendiente de evaluación'));assert(!text.includes('/ 100'));assert(text.includes('Sin informar'));}
-      if(scenario==='zero'){assert(text.includes('0 / 100'));assert(text.includes('Moneda sin informar 0'));assert(text.includes('No entrega un usado'));}
+      if(scenario==='empty'){assert(text.includes('Pendiente'));assert(!text.includes('/100'));assert(text.includes('Sin informar'));}
+      if(scenario==='zero'){assert(text.includes('0/100'));assert(text.includes('Moneda sin informar 0'));assert(text.includes('No entrega un usado'));}
       if(scenario==='error')assert.equal(await evaluate('document.querySelectorAll("[role=alert]").length'),3);
       if(scenario==='unavailable')assert(text.includes('integración pendiente de habilitar'));
       if(scenario==='loading')assert(await evaluate('!!document.querySelector("[aria-busy=true]")'));
       if(scenario==='complete'){
-        assert(text.includes('50 / 100'));assert(text.includes('999.999.999.999,99'));assert(text.includes('Todavía no decidió'));
-        assert(text.includes('Entrega incierta'));assert(text.includes('Envío fallido'));assert(text.includes('identidad no verificada'));
+        assert(text.includes('50/100'));assert(text.includes('Medio'));assert(text.includes('999.999.999.999,99'));assert(text.includes('Todavía no decidió'));
+        assert(text.includes('identidad no verificada'));assert(!text.includes('Procedencia comercial'));
         await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
         assert.equal(await evaluate('document.activeElement.className'),'back-link');
         assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'),'solid');
-        const next=await evaluate(`Array.from(document.querySelectorAll('a')).find(a=>a.textContent==='Siguiente'&&a.href.includes('messages_page=2'))?.getAttribute('href')`);
-        assert(next?.includes('page=2&interests_page=2&messages_page=2'));
-        if(width===1440||width===320){await capture(`${width}-complete`);await evaluate(`document.querySelector('.crm-score').scrollIntoView()`);await capture(`${width}-score`);await evaluate(`document.querySelector('.crm-messages').scrollIntoView()`);await capture(`${width}-messages`);}
-        if(width===1440||width===320){await evaluate(`document.querySelector('.crm-interest').scrollIntoView()`);await capture(`${width}-interest`);await evaluate(`Array.from(document.querySelectorAll('dt')).find(el=>el.textContent==='Presupuesto declarado').scrollIntoView()`);await capture(`${width}-budget`);}
-        await evaluate(`Array.from(document.querySelectorAll('a')).find(a=>a.textContent==='Siguiente'&&a.href.includes('messages_page=2')).focus()`);
-        await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+        if(width===1440||width===390||width===320)await capture(`${width}-complete`);
+        await evaluate(`document.querySelector('.op-score-detail summary').focus()`);
+        await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',windowsVirtualKeyCode:13});
         await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
-        for(let i=0;i<80;i++){if(await evaluate("location.search.includes('messages_page=2') && document.readyState==='complete'"))break;await delay(50);}
-        assert(await evaluate("location.search==='?page=2&interests_page=2&messages_page=2'"),'Keyboard pagination preserves all three pages');
+        await delay(100);
+        assert(await evaluate("document.querySelector('.op-score-detail').open"),'Score opens by keyboard');
+        assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'),'Detail fits viewport');
+        await evaluate(`document.querySelector('.op-score-content').scrollIntoView({block:'nearest'})`);
+        if(width===1440||width===390||width===320)await capture(`${width}-score`);
+        await send('Input.dispatchKeyEvent',{type:'keyDown',key:' ',code:'Space',text:' ',unmodifiedText:' ',windowsVirtualKeyCode:32});
+        await send('Input.dispatchKeyEvent',{type:'keyUp',key:' ',code:'Space',windowsVirtualKeyCode:32});
+        await delay(50);assert(!(await evaluate("document.querySelector('.op-score-detail').open")),'Score closes by keyboard');
+        await evaluate(`document.querySelector('.op-unconfirmed').open=true`);
+        assert((await evaluate('document.body.innerText')).includes('Envío incierto'));
+        assert((await evaluate('document.body.innerText')).includes('Envío fallido'));
+        if(width===1440||width===390||width===320){await evaluate(`document.querySelector('.op-chat-scroll').scrollIntoView()`);await capture(`${width}-messages`);await evaluate(`document.querySelector('.crm-interest').scrollIntoView()`);await capture(`${width}-interest`);}
+        assert.equal(await evaluate('document.querySelectorAll(".op-chat-list .op-bubble").length'),2);
       }
       if(width===320&&scenario!=='complete')await capture(`${width}-${scenario}`);
       results.push({width,scenario,passed:true});
