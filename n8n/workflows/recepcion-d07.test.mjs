@@ -116,22 +116,22 @@ test('el tercer cupo solo cierra, un cierre anterior silencia y PT409 sin cambio
   assert.deepEqual(outputs('¿Reservar respuesta?',1),['Completar turno sin respuesta']);
 });
 
-test('cada remitente conserva su identidad en lotes mixtos y sólo el nuevo tiene ruta de salida', () => {
+test('el remitente temporal retirado se ignora en mensajes y estados; se conserva el histórico sólo para silencio', () => {
   const source={type:'text',text:{body:'Hola'}};
   const senders=['DEMO_REMITENTE_META','DEMO_DESTINATARIO_NUEVO_SIN_MAS','DEMO_DESTINATARIO_META_SIN_MAS','DEMO_REMITENTE_NUEVO','otro'];
   const batch={field:'messages',metadata:{phone_number_id:'META_PHONE_NUMBER_ID'},
     messages:senders.map((from,i)=>({...source,from,id:'evento-'+i}))};
   const rows=run('Mensajes entrantes',{}, {},[{json:batch}]).map(r=>r.json);
-  assert.deepEqual(rows.map(r=>r.from),['DEMO_REMITENTE_META','DEMO_REMITENTE_NUEVO','DEMO_REMITENTE_META','DEMO_REMITENTE_NUEVO']);
-  assert.deepEqual(rows.map(r=>r.reply_recipient),[null,'+DEMO_DESTINATARIO_NUEVO_SIN_MAS',null,'+DEMO_DESTINATARIO_NUEVO_SIN_MAS']);
+  assert.deepEqual(rows.map(r=>r.from),['DEMO_REMITENTE_META','DEMO_REMITENTE_META']);
+  assert.deepEqual(rows.map(r=>r.reply_recipient),[null,null]);
   const receive=(row,disposition,created)=>run('Comprobar ingreso',
     {body:[{disposition,created,receipt_id:'r'}]},{'Mensajes entrantes':row}).json;
   const pending=new Function('$json','return '+params('¿Pendiente?').conditions.conditions[0].leftValue.slice(3,-2));
   assert.equal(pending(receive(rows[0],'paused',true)),false);
   assert.equal(pending(receive(rows[0],'pending',false)),false);
   assert.throws(()=>receive(rows[0],'pending',true),/no quedó en pausa/);
-  const admitted=receive(rows[1],'pending',true);
-  assert.equal(pending(admitted),true);
-  assert.equal(admitted.reply_recipient,rows[1].reply_recipient);
+  const statusRows=run('Notificaciones de estado',{}, {},[{json:{...batch,statuses:senders.map(recipient_id=>({recipient_id,id:'estado',status:'read'}))}}]);
+  assert.equal(statusRows.length,2);
+  assert(rows.every(row=>row.silence_only===true));
   assert.equal(params('Enviar texto por WhatsApp').recipientPhoneNumber,"={{ $('Procesar cada mensaje').item.json.reply_recipient }}");
 });
