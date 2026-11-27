@@ -1,5 +1,11 @@
 # Continuidad — Reportes, 24/11/2026
 
+## D07 — incremento funcional separado, 27/11
+
+#13/#14/#15 están integrados en `origin/main` `2053064`. El checkout principal y QA3114 quedaron en ese commit, conservando `wsp/` y el mismo proceso Next. D07 se prepara en `codex/d07-pausa-72h`, worktree `.pr-work/d07-pausa`; no se incorpora #16 ni se cambia QA.
+
+Decisión V4/backend V3 leídas completas. Implementados contrato de ingreso/toma/resolución atómicos, ciclos por contacto/número comercial, pausa fija desde reserva de cierre incluso temprano, cupos compartidos entre oportunidades, contexto e historial conservados y límites técnicos explícitos sin defaults. [Contrato, pruebas y transición](bot-d07.md); [handoff para n8n](handoff-d07-n8n.md). Migración `20261127153553_bot_contact_cycles_72h.sql` **sólo local, no aplicada remotamente**. Workflow sin modificar; pendiente revisar/aplicar/configurar límites/adaptar n8n y ensayo HTTP autorizado. Los estados históricos descritos más abajo corresponden a sus respectivos cortes.
+
 ## Oportunidades: actualización 27/11/2026
 
 **Cierre del ensayo Ranger posterior:** OP-000064 pasó el contraste de ficha/PostgREST: datos comerciales, Ranger/Amarok separadas, USD 12.000 a agregar, score 70 con cuatro citas y dos mensajes. El saliente está confirmado como `sent`, cierre en cupo 1; no se afirma entrega/lectura. Se corrigió el bloqueo de rueda del chat cambiando `overscroll-behavior` a `auto`, con prueba focalizada de extremos, conversación corta y paginación/anclaje en chat largo. No se modificaron datos ni workflows. Hallazgos estéticos documentados para #16. Sigue pendiente la sesión real de vendedor habilitado/asignado; pruebas SQL existentes aprobadas. [Evidencia completa](qa-ficha-oportunidad.md#resultado-del-ensayo-ranger-y-scroll--2711).

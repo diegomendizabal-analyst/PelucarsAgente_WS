@@ -4,6 +4,7 @@
 **/out/
 **/coverage/
 *.tsbuildinfo
+**/__pycache__/
 
 # Configuración local y credenciales.
 .env*
