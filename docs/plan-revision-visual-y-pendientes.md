@@ -2,6 +2,24 @@
 
 Fecha de corte: 2026-11-27. **PR en borrador: sólo planificación. No contiene cambios de producto.**
 
+## D07 aprobada — actualización del 27/11/2026
+
+El responsable del proyecto aprobó la continuidad por búsqueda y una pausa fija de **72 horas desde el cierre del bot**, incluso si cerró antes del tercer mensaje. La aprobación comercial de Pelucars no se presume. Detalle vigente en [Alcance V4](https://app.notion.com/p/425b6a1d71a48148a19adacf591e1d6d) y [Modelo V3](https://app.notion.com/p/425b6a1d71a481089b99d407f6bd64f9).
+
+- Primer contacto comercial válido: cliente si no existe y primera oportunidad. Reutilizar cliente por teléfono.
+- Misma búsqueda abierta: misma oportunidad; cambio de preferencia actualiza interés y conserva el anterior.
+- Compra adicional independiente: oportunidad distinta conceptualmente. Durante el silencio sólo se guarda para revisión; el alta manual continúa como ampliación futura, no se agrega ahora.
+- Tras Vendida/Perdida, una nueva búsqueda abre otra oportunidad. Agradecimientos o consultas sobre la operación anterior no crean una por sí solos.
+- Pausa por contacto y número comercial, no por oportunidad. Durante ella: guardar sin IA, cálculo, respuesta ni altas automáticas. Los mensajes no extienden la pausa.
+- Vencidas 72 horas, el siguiente mensaje puede iniciar un ciclo nuevo de hasta tres respuestas; el reloj solo no envía ni crea nada.
+- No resetear cupos ni borrar ciclos previos; diseñar elegibilidad y apertura atómicas. Crear otra oportunidad no elude el límite.
+- Sin captura del chat privado, actividades ni habilitación manual del bot. Por ahora, revisión del responsable y cambios de estado.
+- Definir aparte límites de ráfagas/procesamiento; las ejecuciones n8n no quedan gratuitas por silenciar respuestas.
+
+**Secuencia:** hacer ahora el ensayo controlado de ficha nueva. Implementar D07 después en un **PR funcional separado de este plan visual**, antes de habilitar recepción general. D07 no es una oferta de otra versión ni un requisito para repetir el ensayo controlado. La prueba no acredita alta automática general ni pausa/reactivación ya implementadas.
+
+Codex prepara contrato, migración incremental y pruebas locales con tiempo controlado (antes/en/después de 72 horas), cierre temprano, duplicados y concurrencia. n8n integra cuando ese contrato esté disponible. No simular el cambio reseteando contadores ni esperando 72 horas durante una ejecución.
+
 ## Prioridad y separación de trabajos
 
 Primero cerrar la integración funcional actual: datos que llegan al panel, cálculo/persistencia del score y un recorrido nuevo de WhatsApp. La reestructuración visual transversal y las mejoras de Reportes se desarrollan después, sin ampliar #13/#14/#15 con todo este backlog.
