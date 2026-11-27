@@ -86,6 +86,26 @@ Recorrer desktop y móvil con roles disponibles. Usar 1440, 1024, 768, 390 y 320
 
 Antes de cambios masivos: registrar hallazgos por pantalla, proponer patrones compartidos y ordenar prioridades. No cambiar todos los componentes a partir de una única captura.
 
+## Incidencia de scroll en la ficha nueva — 27/11/2026
+
+**Reporte del usuario:** al colocar el puntero sobre el chat no puede seguir desplazando la ficha. La oportunidad nueva del ensayo ya fue creada; sus datos/resultados todavía deben cotejarse en QA. No publicar en este documento identificadores de registros ni datos personales.
+
+**Evidencia de código, no reproducción de navegador:** en #14, commit ee009eac53e052ec9d55668dc7fe863fd18fe8be, `frontend/src/app/crm.css:130` define `.op-chat-scroll` con `max-height:min(560px,65dvh)`, `overflow:auto` y `overscroll-behavior:contain`. Esta última regla impide transferir el desplazamiento a la página al alcanzar los extremos del contenedor y es compatible con el síntoma reportado. No demuestra por sí sola que el scroll interno también esté averiado.
+
+- [ ] Reproducir en QA 3114: conversación corta y larga, puntero sobre burbuja/fondo, comienzo/final del chat y página, rueda/trackpad, teclado y gesto táctil.
+- [ ] En los extremos del chat debe poder continuar el desplazamiento de la ficha sin mover obligatoriamente el mouse fuera del bloque. Si no existe desbordamiento interno, el área no debe sentirse bloqueada.
+- [ ] Verificar si basta ajustar la política de overscroll; no agregar listeners que cancelen wheel/touch ni bloquear el scroll del documento.
+- [ ] Conservar orden, cursor de carga de anteriores y anclaje de lectura. No quitar overflow-anchor ni la lógica de anclaje indiscriminadamente para arreglar otra propiedad.
+- [ ] Si se reproduce, corregirlo como defecto de navegación en **#14 antes de integrarlo**, con prueba focalizada. Este plan conserva el seguimiento; no exige esperar la reestructuración visual general.
+- [ ] Evaluar después en #16 la eliminación del scroll interno para chats cortos y un comportamiento consistente para chat, evidencias, notificaciones y otros paneles desplazables.
+
+No hay evidencia de que este comportamiento modifique mensajes, score o persistencia. Su impacto es de navegación/accesibilidad y puede impedir llegar cómodamente al resto de la ficha.
+
+### Ensayo vigente: Ranger y usado entregado
+El usuario sustituyó el ejemplo de Corolla/100 puntos por **Ford Ranger manual desde 2020**, Amarok 2017 para entregar, **USD 12.000 a agregar**, compra en 45 días, financiación e intención de visita. Esperado: **70/100 Alto = 10 + 30 + 15 + 15** y cierre temprano si todos los grupos están completos.
+
+Además de la revisión visual, cotejar que la Ranger figure como búsqueda y la Amarok sólo como usado; el dinero a agregar no sea presentado como precio total ni confirme compatibilidad de presupuesto con stock. La creación de la oportunidad no acredita por sí sola que extracción, score y envío hayan pasado. El ejemplo Corolla anterior se conserva únicamente como caso alternativo documentado, no es el ensayo actual.
+
 ## Correcciones propuestas para la ficha
 
 El usuario coincide con la mayoría de estas críticas; son propuestas de implementación a contrastar en navegador, no aprobación de cada detalle de interacción.
