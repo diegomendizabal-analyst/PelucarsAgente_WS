@@ -15,6 +15,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),require=createRequire(import.meta.url);
+const chatScrollOnly=process.argv.includes('--chat-scroll');
 const out=join(root,'..','.pr-work','opportunity-ui'); await mkdir(out,{recursive:true});
 const time='2026-11-27T12:00:00Z',id='ee000000-0000-4000-8000-000000000010';
 const name='Cliente de prueba con nombre extenso '+ 'Apellido'.repeat(14);
@@ -99,13 +100,26 @@ try {
   const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));return r.result.value;};
   const capture=async name=>{const {data}=await send('Page.captureScreenshot',{format:'png'});await writeFile(join(out,name+'.png'),Buffer.from(data,'base64'));};
   await send('Page.enable');
-  for(const width of [1440,768,390,320]){
+  for(const width of chatScrollOnly ? [1440,390,320] : [1440,768,390,320]){
     await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});
-    for(const scenario of ['complete','empty','zero','error','unavailable','loading']){
+    for(const scenario of chatScrollOnly ? ['complete'] : ['complete','empty','zero','error','unavailable','loading']){
       await send('Page.navigate',{url:`${base}/oportunidades/${id}?scenario=${scenario}&page=2&interests_page=2`});
       for(let i=0;i<100;i++){if(await evaluate(`document.readyState==='complete' && location.search.includes('scenario=${scenario}') && !!document.querySelector('main')`))break;await delay(50);}
       await evaluate('document.fonts.ready');
       assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'),`Overflow ${width} ${scenario}`);
+      if(chatScrollOnly){
+        // Local fixture room lets both parent boundaries be tested independently.
+        await evaluate(`(()=>{const space=document.createElement('div');space.style.height='700px';document.body.append(space)})()`);
+        for(const edge of ['top','bottom'])for(const delta of [120,24]){
+          const point=await evaluate(`(()=>{const e=document.querySelector('.op-chat-scroll');e.scrollTop=${edge==='top'?'0':'e.scrollHeight'};e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2,parent:scrollY}})()`);
+          await delay(200);
+          await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.x,y:point.y});
+          for(let packet=0;packet<2;packet++){await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:point.x,y:point.y,deltaX:0,deltaY:edge==='top'?-delta:delta});await delay(250);}
+          const moved=await evaluate('scrollY')-point.parent;
+          assert(edge==='top'?moved < -2:moved > 2,`Chat traps wheel: ${width} ${edge} ${delta}`);
+        }
+        results.push({width,scenario:'chat-wheel-boundaries',passed:true});continue;
+      }
       const text=await evaluate('document.body.innerText');
       assert(!text.includes('Error:'),text.slice(0,300));
       if(scenario==='empty'){assert(text.includes('Pendiente'));assert(!text.includes('/100'));assert(text.includes('Sin informar'));}
@@ -141,6 +155,6 @@ try {
       results.push({width,scenario,passed:true});
     }
   }
-  await writeFile(join(out,'results.json'),JSON.stringify(results,null,2));
+  await writeFile(join(out,chatScrollOnly?'scroll-results.json':'results.json'),JSON.stringify(results,null,2));
   console.log(`${results.length} browser cases passed. Screenshots: ${out}`);
 }finally{socket?.close();browser.kill();await new Promise(resolve=>server.close(resolve));}
