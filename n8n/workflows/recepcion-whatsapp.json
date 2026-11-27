@@ -23,7 +23,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const result = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  if (event.field !== 'messages' || event.metadata?.phone_number_id !== 'META_PHONE_NUMBER_ID') continue;\n  for (const m of event.messages ?? []) {\n    if (m.from !== 'DEMO_REMITENTE_META' || m.type !== 'text' || !m.id?.trim() || !m.text?.body?.trim()) continue;\n    result.push({json:{message_id:m.id, from:m.from, phone_number_id:event.metadata.phone_number_id, text:m.text.body}, pairedItem:{item:index}});\n  }\n}\nreturn result;"
+        "jsCode": "const result = [];\nfor (const [index, item] of $input.all().entries()) {\n  const event = item.json;\n  if (event.field !== 'messages' || event.metadata?.phone_number_id !== 'META_PHONE_NUMBER_ID') continue;\n  for (const m of event.messages ?? []) {\n    if (m.from !== 'DEMO_REMITENTE_META' || m.type !== 'text' || !m.id?.trim() || !m.text?.body?.trim()) continue;\n    const contact = (event.contacts ?? []).find(c => c.wa_id === m.from);\n    const provider_profile_name = typeof contact?.profile?.name === 'string' ? contact.profile.name.trim() || null : null;\n    result.push({json:{message_id:m.id, from:m.from, phone_number_id:event.metadata.phone_number_id, text:m.text.body, provider_profile_name}, pairedItem:{item:index}});\n  }\n}\nreturn result;"
       },
       "id": "00000000-0000-4000-8000-000000000002",
       "name": "Mensajes entrantes",
@@ -103,7 +103,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const r=$json.body?.[0];\nif ($json.body?.length !== 1 || r.conversation_id !== \"DEMO_CONVERSACION_UUID\" || !r.message_id || !Number.isSafeInteger(r.history_position) || typeof r.created !== 'boolean') throw new Error('Ingreso inesperado');\nreturn {json:{...r,mensaje:$('Procesar cada mensaje').item.json.text}};"
+        "jsCode": "const r=$json.body?.[0];\nif ($json.body?.length !== 1 || r.conversation_id !== \"DEMO_CONVERSACION_UUID\" || !r.message_id || !Number.isSafeInteger(r.history_position) || typeof r.created !== 'boolean') throw new Error('Ingreso inesperado');\nreturn {json:{...r,mensaje:$('Procesar cada mensaje').item.json.text, provider_profile_name:$('Procesar cada mensaje').item.json.provider_profile_name ?? null}};"
       },
       "id": "00000000-0000-4000-8000-000000000007",
       "name": "Mensaje registrado",
@@ -262,9 +262,9 @@
       "parameters": {
         "text": "=Historial de la conversación (Cliente = persona que consulta, Bot = asistente de Pelucars):\n{{ $json.historial }}\n\nÚltimo mensaje del cliente:\nCliente: {{ $json.mensaje }}",
         "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"vehiculo_buscado\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"caracteristicas\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"presupuesto_importe\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ]\n    },\n    \"presupuesto_moneda\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"enum\": [\n        \"ARS\",\n        \"USD\",\n        null\n      ]\n    },\n    \"presupuesto_alcance\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"enum\": [\n        \"valor_total\",\n        \"dinero_a_agregar\",\n        null\n      ]\n    },\n    \"tiene_usado\": {\n      \"type\": [\n        \"boolean\",\n        \"null\"\n      ]\n    },\n    \"decision_entrega_usado\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"confirmada\",\n        \"descartada\",\n        \"indecisa\",\n        \"no_informada\"\n      ]\n    },\n    \"usado_detalle\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"plazo_compra\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"necesita_financiacion\": {\n      \"type\": [\n        \"boolean\",\n        \"null\"\n      ]\n    },\n    \"resumen_consulta\": {\n      \"type\": \"string\",\n      \"maxLength\": 500\n    },\n    \"senales_score\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"plazo_categoria\": {\"type\": \"string\", \"enum\": [\"hasta_7_dias\",\"de_8_a_30_dias\",\"de_31_a_90_dias\",\"mas_de_90_dias\",\"sin_definir\",\"ambiguo\",\"no_informado\"]},\n        \"plazo_evidencias\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        \"intencion_categoria\": {\"type\": \"string\", \"enum\": [\"reserva_compra\",\"visita_prueba\",\"propuesta_concreta\",\"consulta_general\",\"no_informada\"]},\n        \"intencion_evidencias\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        \"busqueda_evidencias\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        \"presupuesto_evidencias\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}\n      },\n      \"required\": [\"plazo_categoria\",\"plazo_evidencias\",\"intencion_categoria\",\"intencion_evidencias\",\"busqueda_evidencias\",\"presupuesto_evidencias\"]\n    }\n  },\n  \"required\": [\n    \"vehiculo_buscado\",\n    \"caracteristicas\",\n    \"presupuesto_importe\",\n    \"presupuesto_moneda\",\n    \"presupuesto_alcance\",\n    \"tiene_usado\",\n    \"decision_entrega_usado\",\n    \"usado_detalle\",\n    \"plazo_compra\",\n    \"necesita_financiacion\",\n    \"resumen_consulta\",\n    \"senales_score\"\n  ]\n}",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"vehiculo_buscado\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"caracteristicas\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"presupuesto_importe\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ]\n    },\n    \"presupuesto_moneda\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"enum\": [\n        \"ARS\",\n        \"USD\",\n        null\n      ]\n    },\n    \"presupuesto_alcance\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"enum\": [\n        \"valor_total\",\n        \"dinero_a_agregar\",\n        null\n      ]\n    },\n    \"tiene_usado\": {\n      \"type\": [\n        \"boolean\",\n        \"null\"\n      ]\n    },\n    \"decision_entrega_usado\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"confirmada\",\n        \"descartada\",\n        \"indecisa\",\n        \"no_informada\"\n      ]\n    },\n    \"usado_detalle\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"plazo_compra\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"necesita_financiacion\": {\n      \"type\": [\n        \"boolean\",\n        \"null\"\n      ]\n    },\n    \"resumen_consulta\": {\n      \"type\": \"string\",\n      \"maxLength\": 500\n    },\n    \"senales_score\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"plazo_categoria\": {\n          \"type\": \"string\",\n          \"enum\": [\n            \"hasta_7_dias\",\n            \"de_8_a_30_dias\",\n            \"de_31_a_90_dias\",\n            \"mas_de_90_dias\",\n            \"sin_definir\",\n            \"ambiguo\",\n            \"no_informado\"\n          ]\n        },\n        \"plazo_evidencias\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        },\n        \"intencion_categoria\": {\n          \"type\": \"string\",\n          \"enum\": [\n            \"reserva_compra\",\n            \"visita_prueba\",\n            \"propuesta_concreta\",\n            \"consulta_general\",\n            \"no_informada\"\n          ]\n        },\n        \"intencion_evidencias\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        },\n        \"busqueda_evidencias\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        },\n        \"presupuesto_evidencias\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        }\n      },\n      \"required\": [\n        \"plazo_categoria\",\n        \"plazo_evidencias\",\n        \"intencion_categoria\",\n        \"intencion_evidencias\",\n        \"busqueda_evidencias\",\n        \"presupuesto_evidencias\"\n      ]\n    },\n    \"marca\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"description\": \"Marca expresamente mencionada por el cliente.\"\n    },\n    \"modelo\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"description\": \"Modelo expresamente mencionado por el cliente.\"\n    },\n    \"anio_minimo\": {\n      \"type\": [\n        \"integer\",\n        \"null\"\n      ],\n      \"minimum\": 1000,\n      \"maximum\": 9999,\n      \"description\": \"Año mínimo que el cliente fijó para su búsqueda.\"\n    },\n    \"transmision\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"description\": \"Transmisión declarada para el vehículo buscado.\"\n    }\n  },\n  \"required\": [\n    \"vehiculo_buscado\",\n    \"caracteristicas\",\n    \"presupuesto_importe\",\n    \"presupuesto_moneda\",\n    \"presupuesto_alcance\",\n    \"tiene_usado\",\n    \"decision_entrega_usado\",\n    \"usado_detalle\",\n    \"plazo_compra\",\n    \"necesita_financiacion\",\n    \"resumen_consulta\",\n    \"senales_score\",\n    \"marca\",\n    \"modelo\",\n    \"anio_minimo\",\n    \"transmision\"\n  ]\n}",
         "options": {
-          "systemPromptTemplate": "Extraé solamente información explícita del mensaje del cliente. Si un dato no aparece explícitamente, devolvelo como null (o lista vacía en \"caracteristicas\"). No consultes ni inventes stock, precios o disponibilidad. No deduzcas datos que el cliente no mencionó.\n\nEl campo \"tiene_usado\" indica si el cliente confirma que ofrece un vehículo como parte de pago; NO indica si simplemente posee un auto.\n- true: confirma que entrega u ofrece su vehículo como parte de pago.\n- false: declara explícitamente que no entrega ningún vehículo.\n- null: no lo menciona, expresa una posibilidad o todavía no decidió.\nNo conviertas una intención dudosa en una confirmación.\n\nEjemplos para \"tiene_usado\":\n- \"Tengo un Focus 2016 para entregar\" -> true.\n- \"Tengo auto, pero no lo voy a entregar\" -> false.\n- \"Capaz entregue mi auto, todavía no sé\" -> null.\n- \"Tengo un Focus 2016\" -> null (puede guardarse el detalle mencionado en \"usado_detalle\", pero no inferir que lo ofrece como parte de pago).\n\nEl campo \"usado_detalle\" solo debe contener características concretas del vehículo (marca, modelo, año, versión, kilometraje, etc.) que el cliente haya mencionado de forma explícita. Debe quedar null cuando el cliente solo dice \"mi auto\", \"un auto\" o \"mi vehículo\" sin características concretas. Conservá los detalles explícitos cuando existan. No completes ni deduzcas datos faltantes.\n\nEjemplos para \"usado_detalle\":\n- \"Entrego mi auto\" -> null.\n- \"Tengo un auto para entregar\" -> null.\n- \"Entrego mi vehículo\" -> null.\n- \"Entrego un Focus 2016\" -> \"Focus 2016\".\n\nCONTEXTO CONVERSACIONAL: la entrada contiene un historial con líneas \"Cliente:\" y \"Bot:\", seguido del último mensaje del cliente.\n- Extraé los datos declarados por el cliente, tanto en el historial como en el último mensaje.\n- Las preguntas y los textos del Bot aportan contexto para interpretar las respuestas, pero NO confirman datos: nunca tomes un dato solo porque el Bot lo mencionó o lo insinuó.\n- Conservá la información anterior que el cliente no haya corregido.\n- Ante una corrección explícita del cliente, usá lo último que declaró.\n- Mantener incertidumbre y condiciones: si el cliente expresa una posibilidad o una condición, no la conviertas en una decisión confirmada (por ejemplo, \"tiene_usado\" sigue en null mientras no confirme que entrega el vehículo).\n- Una respuesta breve del cliente puede completar la pregunta del Bot (por ejemplo, \"En dólares\" responde la moneda y se normaliza a \"USD\").\n\nMONEDA: \"presupuesto_moneda\" solo admite \"ARS\", \"USD\" o null.\n- Normalizá dólares estadounidenses (\"dólares\", \"USD\", \"u$s\", \"U$D\", \"dolares\") a \"USD\".\n- Normalizá pesos argentinos (\"pesos\", \"ARS\") a \"ARS\".\n- No deduzcas la moneda a partir de un símbolo \"$\" aislado: si solo aparece \"$\" sin aclarar la moneda, devolvé null.\n- Si el cliente nombra otra moneda o la moneda no es clara, devolvé null.\n- Si el cliente corrige la moneda, usá la última que declaró.\n\nDECISIÓN SOBRE LA ENTREGA DEL USADO: \"decision_entrega_usado\" es obligatorio y solo admite estos valores:\n- \"confirmada\": el cliente confirma que ofrece un vehículo como parte de pago.\n- \"descartada\": el cliente declara que no entrega ningún vehículo.\n- \"indecisa\": el cliente expresa duda, una posibilidad o dice que aún no decidió.\n- \"no_informada\": el cliente no expresa ninguna decisión sobre la entrega.\nCoherencia obligatoria con \"tiene_usado\": confirmada -> true; descartada -> false; indecisa o no_informada -> null.\nSi el cliente corrige su decisión durante la conversación, prevalece la decisión más reciente del cliente.\nEjemplos de \"decision_entrega_usado\":\n- \"Entrego mi Focus 2016\" -> \"confirmada\" (tiene_usado true).\n- \"No pienso entregar ningún auto\" -> \"descartada\" (tiene_usado false).\n- \"Capaz entregue mi auto, todavía no sé\" -> \"indecisa\" (tiene_usado null).\n- \"Todavía no decidí si entregarlo\" -> \"indecisa\" (tiene_usado null).\n- El cliente no menciona nada sobre un usado -> \"no_informada\" (tiene_usado null).\n- Dijo \"capaz entrego mi auto\" y luego \"sí, lo entrego\" -> \"confirmada\" (tiene_usado true).\n\nRESUMEN DE LA CONSULTA: \"resumen_consulta\" es obligatorio. Es un texto en español, de máximo 500 caracteres, que resume la búsqueda del cliente usando exclusivamente lo que el cliente declaró en el historial y en el último mensaje.\n- Incluí los datos conocidos: vehículo o características buscadas, presupuesto y moneda, entrega de usado, plazo de compra y financiación. Omití los datos desconocidos o indicá brevemente que no fueron informados.\n- Diferenciá presupuesto total de dinero para agregar, según \"presupuesto_alcance\".\n- Si el dinero disponible depende de entregar un usado, explicitalo en el resumen.\n- Preservá las dudas y condiciones: no presentes una entrega indecisa como confirmada.\n- No inventes datos, stock, precios ni promesas comerciales.\n- No interpretes las preguntas ni los textos del Bot como declaraciones del cliente.\n- Mantenelo coherente con los demás campos extraídos.\nEjemplo: \"Busca un vehículo automático. Dispone de 10000 USD para agregar si entrega su auto, pero aún no decidió si lo entregará. Quiere comprar el mes que viene y no necesita financiación.\"\n\nSEÑALES PARA EL SCORE: \"senales_score\" es obligatorio y todos sus campos son obligatorios. Se extrae exclusivamente de declaraciones del cliente en el historial y en el último mensaje.\n- Las evidencias son fragmentos literales de lo que escribió el cliente (historial o último mensaje). Nunca cites preguntas o textos del Bot, ejemplos de este prompt ni \"resumen_consulta\".\n- Sin evidencia, devolvé una lista vacía.\n- Conservá negaciones, dudas y condiciones dentro de los fragmentos citados.\n- Ante una corrección del cliente, usá la declaración vigente y no cites la retractada como vigente.\n\"plazo_categoria\" (con \"plazo_evidencias\"):\n- \"hasta_7_dias\": plazo de hasta 7 días (por ejemplo, \"en 5 días\").\n- \"de_8_a_30_dias\": entre 8 y 30 días (por ejemplo, \"dentro de dos semanas\").\n- \"de_31_a_90_dias\": entre 31 y 90 días (por ejemplo, \"en dos meses\").\n- \"mas_de_90_dias\": más de 90 días.\n- \"sin_definir\": el cliente dice que no tiene fecha definida.\n- \"ambiguo\": por ahora, expresiones como \"este mes\", \"el mes que viene\" y \"cuanto antes\" van siempre como \"ambiguo\"; su normalización temporal se definirá después.\n- \"no_informado\": no menciona plazo.\n\"intencion_categoria\" (con \"intencion_evidencias\"):\n- \"reserva_compra\": quiere reservar o iniciar concretamente la compra.\n- \"visita_prueba\": pide coordinar una visita o una prueba de manejo.\n- \"propuesta_concreta\": solicita una propuesta personalizada para su caso.\n- \"consulta_general\": solo pide información o declara que está averiguando.\n- \"no_informada\": no hay una intención clasificable.\nSi hay varias intenciones vigentes, elegí en este orden: reserva_compra, visita_prueba, propuesta_concreta, consulta_general. No conserves una intención que el cliente haya retractado. Preguntar qué significa reservar no equivale a querer reservar.\n\"busqueda_evidencias\": fragmentos literales del cliente sobre el vehículo o las características que busca.\n\"presupuesto_evidencias\": fragmentos literales del cliente sobre su presupuesto. Conservá las condiciones, especialmente cuando el dinero para agregar depende de entregar un usado.\nNo agregues puntos ni totales."
+          "systemPromptTemplate": "Extraé solamente información explícita del mensaje del cliente. Si un dato no aparece explícitamente, devolvelo como null (o lista vacía en \"caracteristicas\"). No consultes ni inventes stock, precios o disponibilidad. No deduzcas datos que el cliente no mencionó.\n\nEl campo \"tiene_usado\" indica si el cliente confirma que ofrece un vehículo como parte de pago; NO indica si simplemente posee un auto.\n- true: confirma que entrega u ofrece su vehículo como parte de pago.\n- false: declara explícitamente que no entrega ningún vehículo.\n- null: no lo menciona, expresa una posibilidad o todavía no decidió.\nNo conviertas una intención dudosa en una confirmación.\n\nEjemplos para \"tiene_usado\":\n- \"Tengo un Focus 2016 para entregar\" -> true.\n- \"Tengo auto, pero no lo voy a entregar\" -> false.\n- \"Capaz entregue mi auto, todavía no sé\" -> null.\n- \"Tengo un Focus 2016\" -> null (puede guardarse el detalle mencionado en \"usado_detalle\", pero no inferir que lo ofrece como parte de pago).\n\nEl campo \"usado_detalle\" solo debe contener características concretas del vehículo (marca, modelo, año, versión, kilometraje, etc.) que el cliente haya mencionado de forma explícita. Debe quedar null cuando el cliente solo dice \"mi auto\", \"un auto\" o \"mi vehículo\" sin características concretas. Conservá los detalles explícitos cuando existan. No completes ni deduzcas datos faltantes.\n\nEjemplos para \"usado_detalle\":\n- \"Entrego mi auto\" -> null.\n- \"Tengo un auto para entregar\" -> null.\n- \"Entrego mi vehículo\" -> null.\n- \"Entrego un Focus 2016\" -> \"Focus 2016\".\n\nCONTEXTO CONVERSACIONAL: la entrada contiene un historial con líneas \"Cliente:\" y \"Bot:\", seguido del último mensaje del cliente.\n- Extraé los datos declarados por el cliente, tanto en el historial como en el último mensaje.\n- Las preguntas y los textos del Bot aportan contexto para interpretar las respuestas, pero NO confirman datos: nunca tomes un dato solo porque el Bot lo mencionó o lo insinuó.\n- Conservá la información anterior que el cliente no haya corregido.\n- Ante una corrección explícita del cliente, usá lo último que declaró.\n- Mantener incertidumbre y condiciones: si el cliente expresa una posibilidad o una condición, no la conviertas en una decisión confirmada (por ejemplo, \"tiene_usado\" sigue en null mientras no confirme que entrega el vehículo).\n- Una respuesta breve del cliente puede completar la pregunta del Bot (por ejemplo, \"En dólares\" responde la moneda y se normaliza a \"USD\").\n\nMONEDA: \"presupuesto_moneda\" solo admite \"ARS\", \"USD\" o null.\n- Normalizá dólares estadounidenses (\"dólares\", \"USD\", \"u$s\", \"U$D\", \"dolares\") a \"USD\".\n- Normalizá pesos argentinos (\"pesos\", \"ARS\") a \"ARS\".\n- No deduzcas la moneda a partir de un símbolo \"$\" aislado: si solo aparece \"$\" sin aclarar la moneda, devolvé null.\n- Si el cliente nombra otra moneda o la moneda no es clara, devolvé null.\n- Si el cliente corrige la moneda, usá la última que declaró.\n\nDECISIÓN SOBRE LA ENTREGA DEL USADO: \"decision_entrega_usado\" es obligatorio y solo admite estos valores:\n- \"confirmada\": el cliente confirma que ofrece un vehículo como parte de pago.\n- \"descartada\": el cliente declara que no entrega ningún vehículo.\n- \"indecisa\": el cliente expresa duda, una posibilidad o dice que aún no decidió.\n- \"no_informada\": el cliente no expresa ninguna decisión sobre la entrega.\nCoherencia obligatoria con \"tiene_usado\": confirmada -> true; descartada -> false; indecisa o no_informada -> null.\nSi el cliente corrige su decisión durante la conversación, prevalece la decisión más reciente del cliente.\nEjemplos de \"decision_entrega_usado\":\n- \"Entrego mi Focus 2016\" -> \"confirmada\" (tiene_usado true).\n- \"No pienso entregar ningún auto\" -> \"descartada\" (tiene_usado false).\n- \"Capaz entregue mi auto, todavía no sé\" -> \"indecisa\" (tiene_usado null).\n- \"Todavía no decidí si entregarlo\" -> \"indecisa\" (tiene_usado null).\n- El cliente no menciona nada sobre un usado -> \"no_informada\" (tiene_usado null).\n- Dijo \"capaz entrego mi auto\" y luego \"sí, lo entrego\" -> \"confirmada\" (tiene_usado true).\n\nRESUMEN DE LA CONSULTA: \"resumen_consulta\" es obligatorio. Es un texto en español, de máximo 500 caracteres, que resume la búsqueda del cliente usando exclusivamente lo que el cliente declaró en el historial y en el último mensaje.\n- Incluí los datos conocidos: vehículo o características buscadas, presupuesto y moneda, entrega de usado, plazo de compra y financiación. Omití los datos desconocidos o indicá brevemente que no fueron informados.\n- Diferenciá presupuesto total de dinero para agregar, según \"presupuesto_alcance\".\n- Si el dinero disponible depende de entregar un usado, explicitalo en el resumen.\n- Preservá las dudas y condiciones: no presentes una entrega indecisa como confirmada.\n- No inventes datos, stock, precios ni promesas comerciales.\n- No interpretes las preguntas ni los textos del Bot como declaraciones del cliente.\n- Mantenelo coherente con los demás campos extraídos.\nEjemplo: \"Busca un vehículo automático. Dispone de 10000 USD para agregar si entrega su auto, pero aún no decidió si lo entregará. Quiere comprar el mes que viene y no necesita financiación.\"\n\nSEÑALES PARA EL SCORE: \"senales_score\" es obligatorio y todos sus campos son obligatorios. Se extrae exclusivamente de declaraciones del cliente en el historial y en el último mensaje.\n- Las evidencias son fragmentos literales de lo que escribió el cliente (historial o último mensaje). Nunca cites preguntas o textos del Bot, ejemplos de este prompt ni \"resumen_consulta\".\n- Sin evidencia, devolvé una lista vacía.\n- Conservá negaciones, dudas y condiciones dentro de los fragmentos citados.\n- Ante una corrección del cliente, usá la declaración vigente y no cites la retractada como vigente.\n\"plazo_categoria\" (con \"plazo_evidencias\"):\n- \"hasta_7_dias\": plazo de hasta 7 días (por ejemplo, \"en 5 días\").\n- \"de_8_a_30_dias\": entre 8 y 30 días (por ejemplo, \"dentro de dos semanas\").\n- \"de_31_a_90_dias\": entre 31 y 90 días (por ejemplo, \"en dos meses\").\n- \"mas_de_90_dias\": más de 90 días.\n- \"sin_definir\": el cliente dice que no tiene fecha definida.\n- \"ambiguo\": por ahora, expresiones como \"este mes\", \"el mes que viene\" y \"cuanto antes\" van siempre como \"ambiguo\"; su normalización temporal se definirá después.\n- \"no_informado\": no menciona plazo.\n\"intencion_categoria\" (con \"intencion_evidencias\"):\n- \"reserva_compra\": quiere reservar o iniciar concretamente la compra.\n- \"visita_prueba\": pide coordinar una visita o una prueba de manejo.\n- \"propuesta_concreta\": solicita una propuesta personalizada para su caso.\n- \"consulta_general\": solo pide información o declara que está averiguando.\n- \"no_informada\": no hay una intención clasificable.\nSi hay varias intenciones vigentes, elegí en este orden: reserva_compra, visita_prueba, propuesta_concreta, consulta_general. No conserves una intención que el cliente haya retractado. Preguntar qué significa reservar no equivale a querer reservar.\n\"busqueda_evidencias\": fragmentos literales del cliente sobre el vehículo o las características que busca.\n\"presupuesto_evidencias\": fragmentos literales del cliente sobre su presupuesto. Conservá las condiciones, especialmente cuando el dinero para agregar depende de entregar un usado.\nNo agregues puntos ni totales.\nPara marca, modelo, anio_minimo y transmision usá exclusivamente lo que declaró el cliente sobre el vehículo buscado en el contexto vigente. Devolvé null cuando falte o sea ambiguo. Mencionar Corolla no declara una marca. Conservá vehiculo_buscado, las características y las reglas de evidencias anteriores."
         }
       },
       "id": "00000000-0000-4000-8000-00000000000c",
@@ -294,66 +294,6 @@
         2480,
         416
       ]
-    },
-    {
-      "id": "00000000-0000-4000-8000-00000000000e",
-      "name": "Guardar resumen de la oportunidad",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        2690,
-        176
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/save_bot_lead_summary",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "supabaseApi",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ { p_conversation_id: $('Mensaje registrado').item.json.conversation_id, p_message_id: $('Mensaje registrado').item.json.message_id, p_summary: $json.output.resumen_consulta } }}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "responseFormat": "json"
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "00000000-0000-4000-8000-00000000000f",
-      "name": "¿Resumen vigente?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        2890,
-        176
-      ],
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.body?.length === 1 && ['applied', 'unchanged'].includes($json.body[0]?.outcome) && $json.body[0]?.source_message_id === $('Mensaje registrado').item.json.message_id }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ]
-        },
-        "options": {}
-      }
     },
     {
       "parameters": {
@@ -690,26 +630,6 @@
     },
     {
       "parameters": {
-        "resource": "message",
-        "operation": "send",
-        "phoneNumberId": "META_PHONE_NUMBER_ID",
-        "recipientPhoneNumber": "DEMO_DESTINATARIO_META",
-        "messageType": "text",
-        "textBody": "={{ $('Respuesta persistida').item.json.body }}"
-      },
-      "id": "00000000-0000-4000-8000-00000000001d",
-      "name": "Enviar texto por WhatsApp",
-      "type": "n8n-nodes-base.whatsApp",
-      "typeVersion": 1.1,
-      "position": [
-        5248,
-        -144
-      ],
-      "retryOnFail": false,
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const reply = $('Respuesta persistida').item.json;\nconst messages = $json.messages;\nconst id = Array.isArray(messages) && messages.length === 1 ? messages[0]?.id : null;\nconst error = $json.error;\nconst response = error?.errorResponse ?? error?.response;\nconst graphError = response?.body?.error ?? response?.data?.error;\nconst status = Number(error?.httpCode ?? response?.statusCode ?? response?.status);\nconst accepted = !error && $json.messaging_product === 'whatsapp'\n  && typeof id === 'string' && /^wamid\\.\\S+$/.test(id);\nconst rejected = [400, 401, 403, 404].includes(status)\n  && Number.isInteger(graphError?.code) && graphError.is_transient !== true;\nconst result = {\n  p_conversation_id: reply.conversation_id,\n  p_message_id: reply.id,\n  p_state: accepted ? 'sent' : rejected ? 'failed' : 'unknown',\n};\nif (accepted) result.p_provider_message_id = id;\nreturn {json:result};"
       },
@@ -747,6 +667,136 @@
       "position": [
         5728,
         -144
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "phoneNumberId": "META_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "DEMO_DESTINATARIO_META",
+        "messageType": "text",
+        "textBody": "={{ $('Respuesta persistida').item.json.body }}"
+      },
+      "id": "00000000-0000-4000-8000-00000000001d",
+      "name": "Enviar texto por WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        5248,
+        -144
+      ],
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const message = $('Mensaje registrado').item.json;\nconst extraction = $json.output;\nif (!extraction || typeof extraction !== 'object' || Array.isArray(extraction)) throw new Error('Falta la extracción del entrante');\nconst attributes = {};\nfor (const key of ['marca', 'modelo', 'anio_minimo', 'transmision']) {\n  if (Object.hasOwn(extraction, key)) attributes[key] = extraction[key];\n}\nreturn {json: {\n  p_conversation_id: message.conversation_id,\n  p_message_id: message.message_id,\n  p_extraction: extraction,\n  p_attributes: attributes,\n  p_provider_profile_name: message.provider_profile_name ?? null,\n}};"
+      },
+      "id": "00000000-0000-4000-8000-000000000200",
+      "name": "Preparar datos comerciales",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2490,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/save_bot_lead_details",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "00000000-0000-4000-8000-000000000201",
+      "name": "Guardar datos comerciales",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2710,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const request = $('Preparar datos comerciales').item.json;\nconst rows = $json.body;\nconst row = rows?.[0];\nif ($json.statusCode !== 200 || !Array.isArray(rows) || rows.length !== 1 || !['applied', 'unchanged'].includes(row?.outcome) || row.source_message_id !== request.p_message_id || row.lead_id !== \"DEMO_OPORTUNIDAD_UUID\") {\n  throw new Error('save_bot_lead_details: ' + (row?.outcome ?? 'respuesta inesperada') + '. Detener el turno y revisar el corte.');\n}\nreturn {json: request.p_extraction};"
+      },
+      "id": "00000000-0000-4000-8000-000000000202",
+      "name": "Comprobar datos comerciales",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2930,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const d = $json;\nconst err = (m) => { throw new Error(\"Calcular score: \" + m); };\n\nconst s = d.senales_score;\nif (s === null || typeof s !== \"object\" || Array.isArray(s)) {\n  err(\"senales_score ausente o invalido: se esperaba un objeto.\");\n}\n\nconst evidencias = (nombre) => {\n  const v = s[nombre];\n  if (!Array.isArray(v)) err(nombre + \" invalido: se esperaba un array de textos.\");\n  v.forEach((x) => {\n    if (typeof x !== \"string\") err(nombre + \" invalido: todos los elementos deben ser texto.\");\n  });\n  return v;\n};\nconst tieneEvidencia = (arr) => arr.some((x) => x.trim() !== \"\");\n\nconst PLAZO = { hasta_7_dias: 30, de_8_a_30_dias: 20, de_31_a_90_dias: 10, mas_de_90_dias: 0, sin_definir: 0, ambiguo: 0, no_informado: 0 };\nconst INTENCION = { reserva_compra: 40, visita_prueba: 30, propuesta_concreta: 20, consulta_general: 0, no_informada: 0 };\n\nconst plazoCat = s.plazo_categoria;\nif (typeof plazoCat !== \"string\" || !Object.prototype.hasOwnProperty.call(PLAZO, plazoCat)) {\n  err(\"plazo_categoria desconocida: \" + JSON.stringify(plazoCat) + \".\");\n}\nconst intCat = s.intencion_categoria;\nif (typeof intCat !== \"string\" || !Object.prototype.hasOwnProperty.call(INTENCION, intCat)) {\n  err(\"intencion_categoria desconocida: \" + JSON.stringify(intCat) + \".\");\n}\n\nconst evPlazo = evidencias(\"plazo_evidencias\");\nconst evIntencion = evidencias(\"intencion_evidencias\");\nconst evBusqueda = evidencias(\"busqueda_evidencias\");\nconst evPresupuesto = evidencias(\"presupuesto_evidencias\");\n\nif (d.caracteristicas !== undefined && d.caracteristicas !== null && !Array.isArray(d.caracteristicas)) {\n  err(\"caracteristicas invalido: se esperaba un array.\");\n}\nconst caracteristicas = Array.isArray(d.caracteristicas) ? d.caracteristicas : [];\n\nconst exigirEvidencia = (grupo, puntos, evid) => {\n  if (puntos > 0 && !tieneEvidencia(evid)) {\n    err(\"el grupo \" + grupo + \" aporta \" + puntos + \" puntos pero no tiene evidencias con texto.\");\n  }\n};\n\n// 1. Plazo\nconst ptsPlazo = PLAZO[plazoCat];\nexigirEvidencia(\"plazo\", ptsPlazo, evPlazo);\n\n// 2. Intencion\nconst ptsIntencion = INTENCION[intCat];\nexigirEvidencia(\"intencion\", ptsIntencion, evIntencion);\n\n// 3. Busqueda\nconst hayVehiculo = typeof d.vehiculo_buscado === \"string\" && d.vehiculo_buscado.trim() !== \"\";\nconst hayCaracteristicas = caracteristicas.some((c) => typeof c === \"string\" && c.trim() !== \"\");\nconst busquedaDefinida = hayVehiculo || hayCaracteristicas;\nconst ptsBusqueda = busquedaDefinida ? 15 : 0;\nexigirEvidencia(\"busqueda\", ptsBusqueda, evBusqueda);\n\n// 4. Presupuesto\nconst importeValido = typeof d.presupuesto_importe === \"number\" && Number.isFinite(d.presupuesto_importe) && d.presupuesto_importe >= 0;\nconst monedaValida = d.presupuesto_moneda === \"ARS\" || d.presupuesto_moneda === \"USD\";\nconst alcanceValido = d.presupuesto_alcance === \"valor_total\" || d.presupuesto_alcance === \"dinero_a_agregar\";\nconst presupuestoCompleto = importeValido && monedaValida && alcanceValido;\nconst ptsPresupuesto = presupuestoCompleto ? 15 : 0;\nexigirEvidencia(\"presupuesto\", ptsPresupuesto, evPresupuesto);\n\nconst total = ptsPlazo + ptsIntencion + ptsBusqueda + ptsPresupuesto;\nconst banda = total >= 60 ? \"alta\" : (total >= 30 ? \"media\" : \"baja\");\n\nconst motivos = [];\nif (plazoCat === \"ambiguo\") motivos.push(\"El plazo de compra es ambiguo: su normalizacion temporal todavia no esta definida.\");\nif (plazoCat === \"no_informado\") motivos.push(\"El cliente no informo el plazo de compra.\");\nif (intCat === \"no_informada\") motivos.push(\"No hay una intencion clasificable.\");\nif (!busquedaDefinida) motivos.push(\"Falta una busqueda definida (vehiculo o caracteristicas).\");\nif (!presupuestoCompleto) motivos.push(\"El presupuesto esta incompleto (importe, moneda o alcance).\");\nif (d.presupuesto_alcance === \"dinero_a_agregar\" && d.decision_entrega_usado === \"indecisa\") {\n  motivos.push(\"El importe esta condicionado: es dinero a agregar y el cliente no decidio si entrega su usado.\");\n}\n\nreturn {\n  json: {\n    ...d,\n    evaluacion_score: {\n      version_reglas: \"pelucars_score_v1_prototipo\",\n      total,\n      banda,\n      desglose: {\n        plazo: { puntos: ptsPlazo, motivo: \"plazo_categoria = \" + plazoCat, evidencias: evPlazo },\n        intencion: { puntos: ptsIntencion, motivo: \"intencion_categoria = \" + intCat, evidencias: evIntencion },\n        busqueda: { puntos: ptsBusqueda, motivo: busquedaDefinida ? \"Hay vehiculo o caracteristicas definidas.\" : \"No hay vehiculo ni caracteristicas definidas.\", evidencias: evBusqueda },\n        presupuesto: { puntos: ptsPresupuesto, motivo: presupuestoCompleto ? \"Importe, moneda y alcance completos.\" : \"Presupuesto incompleto.\", evidencias: evPresupuesto },\n      },\n      informacion_limitada: motivos.length > 0,\n      motivos_limitacion: motivos,\n    },\n  },\n};"
+      },
+      "id": "00000000-0000-4000-8000-000000000203",
+      "name": "Calcular score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3150,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://proyecto-demo.supabase.co/rest/v1/rpc/save_bot_score",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_conversation_id: $('Preparar datos comerciales').item.json.p_conversation_id, p_message_id: $('Preparar datos comerciales').item.json.p_message_id, p_evaluation: $json.evaluacion_score} }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "00000000-0000-4000-8000-000000000204",
+      "name": "Guardar score",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3370,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const rows = $json.body;\nconst row = rows?.[0];\nif ($json.statusCode !== 200 || !Array.isArray(rows) || rows.length !== 1 || !row?.evaluation_id || !['applied', 'unchanged'].includes(row.outcome)) {\n  throw new Error('save_bot_score: ' + (row?.outcome ?? 'respuesta inesperada'));\n}\nreturn {json: row};"
+      },
+      "id": "00000000-0000-4000-8000-000000000205",
+      "name": "Comprobar score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3590,
+        560
       ]
     }
   ],
@@ -880,17 +930,6 @@
           {
             "node": "Extraer datos de la consulta",
             "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extraer datos de la consulta": {
-      "main": [
-        [
-          {
-            "node": "Guardar resumen de la oportunidad",
-            "type": "main",
             "index": 0
           }
         ]
@@ -1067,24 +1106,6 @@
         ]
       ]
     },
-    "Enviar texto por WhatsApp": {
-      "main": [
-        [
-          {
-            "node": "Interpretar resultado de Meta",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Interpretar resultado de Meta",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Interpretar resultado de Meta": {
       "main": [
         [
@@ -1107,29 +1128,95 @@
         ]
       ]
     },
-    "Guardar resumen de la oportunidad": {
+    "Enviar texto por WhatsApp": {
       "main": [
         [
           {
-            "node": "¿Resumen vigente?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Resumen vigente?": {
-      "main": [
-        [
-          {
-            "node": "Leer estado vigente",
+            "node": "Interpretar resultado de Meta",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Procesar cada mensaje",
+            "node": "Interpretar resultado de Meta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer datos de la consulta": {
+      "main": [
+        [
+          {
+            "node": "Preparar datos comerciales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar datos comerciales": {
+      "main": [
+        [
+          {
+            "node": "Guardar datos comerciales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar datos comerciales": {
+      "main": [
+        [
+          {
+            "node": "Comprobar datos comerciales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar datos comerciales": {
+      "main": [
+        [
+          {
+            "node": "Calcular score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular score": {
+      "main": [
+        [
+          {
+            "node": "Guardar score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar score": {
+      "main": [
+        [
+          {
+            "node": "Comprobar score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar score": {
+      "main": [
+        [
+          {
+            "node": "Leer estado vigente",
             "type": "main",
             "index": 0
           }
@@ -1163,9 +1250,7 @@
         "Leer historial anterior",
         "Preparar contexto",
         "Extraer datos de la consulta",
-        "OpenAI Chat Model",
-        "Guardar resumen de la oportunidad",
-        "¿Resumen vigente?"
+        "OpenAI Chat Model"
       ]
     },
     {
@@ -1212,6 +1297,18 @@
         "Enviar texto por WhatsApp",
         "Interpretar resultado de Meta",
         "Registrar resultado"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000206",
+      "name": "Datos comerciales y score",
+      "nodeNames": [
+        "Preparar datos comerciales",
+        "Guardar datos comerciales",
+        "Comprobar datos comerciales",
+        "Calcular score",
+        "Guardar score",
+        "Comprobar score"
       ]
     }
   ],
