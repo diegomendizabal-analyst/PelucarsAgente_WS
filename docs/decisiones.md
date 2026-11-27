@@ -5,6 +5,10 @@ Actualizado el 24/11/2026. Fuentes vigentes: [alcance V3](referencias/alcance-v3
 
 El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus identificadores D01–D19 no equivalen a los del alcance V2. El [modelo vigente](modelo-de-datos.md) sustituye el diseño inicial.
 
+## Acuerdos posteriores del 27/11 — D16, D20 y D08 parcial
+
+Ver [registro completo para Codex y n8n](acuerdos-catalogo-stock-preguntas.md). Aprobados por el responsable del proyecto; no se atribuye aprobación comercial a Pelucars. D16 permite interpretar modelos y errores y crear fichas faltantes sin unidades/precio; D20 mantiene estado manual y aviso único por oportunidad/unidad a responsable y administrador; D08 fija el orden de preguntas, sin aprobar nuevos pesos del score. Implementación ampliada pendiente. Las referencias anteriores de este documento conservan su fecha de corte.
+
 ## Confirmado
 
 - Una sucursal; V1 no necesita zonas ni sucursales en el modelo.
@@ -27,7 +31,7 @@ El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus id
 - Pendientes adicionales autorizados el 24/11: enlaces Volver reconocibles, interés sin recuadro anidado, paginado innecesario oculto, rótulo Resumen de la consulta y oportunidades por vehículo con acceso por responsable/admin.
 - Cinco estados: Nueva consulta, En seguimiento, Vendido, Perdido y En espera de stock. Este último nombre ya está definido (D14).
 - Ventas registradas explícitamente por responsable/admin, con actualización transaccional de la unidad vendida. El administrador gestiona inventario (D17).
-- El catálogo reside en Supabase y se administra desde el panel; bot sin catálogo, precios ni stock en V1.
+- El catálogo reside en Supabase. Acuerdo posterior del 27/11 (D16): el bot puede asociar y crear fichas de marca/modelo sin unidades, stock ni precio; implementación ampliada pendiente. Esto no habilita cotizaciones, recomendaciones ni promesas de disponibilidad por WhatsApp.
 - Separación confirmada el 19/11: ficha por marca/modelo; versión, año, precio y características en cada unidad física. El stock disponible se calcula por unidades, no se edita como cantidad. Datos desconocidos opcionales.
 - Revisión del 20/11: el código interno de unidad se genera en la base (`PEL-<número>`) y no se ingresa ni se modifica en los formularios. Los códigos existentes se conservan. La secuencia puede tener saltos; no representa cantidad de stock. La referencia del sistema externo será independiente y sigue pendiente de definición.
 - Búsqueda del 20/11: marca/modelo al escribir con pausa de 300 ms; stock, catálogo, año y transmisión al cambiar. Año/transmisión y, cuando se pide, disponibilidad deben coincidir en la misma unidad. No se cruzan características de autos diferentes. La búsqueda se realiza en la base antes de paginar.
@@ -62,16 +66,16 @@ El alta de Auth y la inserción de perfil no son una sola transacción. Un fallo
 | D02 | Capacidad de toma voluntaria en producción | Demo sin tope provisional autorizado el 20/11; regla definitiva pendiente. |
 | D03 | Quién cambia disponibilidad | Separada de cuenta habilitada; sin control operativo implementado. |
 | D07 | Ventana de siete días | Faltan origen del cómputo, retornos anteriores y excepciones. |
-| D08 | Preguntas y score | Aprobar criterios, pesos y momento; no implementar motor. |
+| D08 | Orden de preguntas aprobado; score parcialmente pendiente | Vehículo → presupuesto/alcance → usado → plazo → financiación; sólo faltantes y máximo tres respuestas incluido cierre. Motor del prototipo implementado. Criterios/pesos/bandas/momento pendientes de aprobación comercial. Ver acuerdos del 27/11. |
 | D09 | Cola al liberarse un vendedor | El cuerpo dice asignar el más antiguo al liberarse; la conclusión habla de toma voluntaria si no hubo libres. Confirmar si la segunda limita también el drenaje posterior. |
 | D12 | Correos a otros vendedores por pendientes | No incluir sin acuerdo. El correo al asignado es parte del alcance futuro de asignaciones. |
 | D13 | Carga inicial e integración externa | Reunión pendiente; sin importación ni sincronización implícita. |
 | D15 | Devolver oportunidades tras conocer score | Reasignación administrativa como mecanismo confirmado; no agregar devolución automática. |
-| D16 | Granularidad y normalización de catálogo | Confirmada ficha marca/modelo y unidades con versión/año. Implementada deduplicación por mayúsculas y espacios. Consolidación automática de nombres ambiguos e importación siguen pendientes. |
+| D16 | Interpretación y creación del catálogo aprobadas | Reutilizar o crear marca/modelo, interpretar modelos conocidos y errores, sin inventar unidades/precio. Búsqueda general/ambigua puede quedar sin vínculo. Ampliación pendiente de implementar; ver acuerdos del 27/11. |
 | D17 | Anulación/corrección de una venta | Administrar stock está confirmado; faltan trazabilidad, permisos y reversión de venta. No liberar stock por cambiar una etiqueta. |
 | D18 | KPI restantes | Atribución operativa y valores iniciales confirmados arriba; ventas/score y pérdidas individuales siguen pendientes de sus fuentes y reglas. |
 | D19 | Reapertura de cerradas | No admitida por las operaciones actuales; acordar operación y motivo antes de habilitarla. |
-| D20 | Avisos por ingreso de stock | Definir compatibilidad, desconocidos, destinatarios admin, reingresos y separación demo/real. No implementados en Reportes. |
+| D20 | Reglas de avisos aprobadas; implementación pendiente | Espera de stock manual. Unidad cumple condiciones expresas; desconocidos no confirman. Aviso único por oportunidad/unidad al responsable y administrador; sin cambio de estado ni WhatsApp automático. Ver acuerdos del 27/11. |
 
 ## Decisiones técnicas pendientes
 
