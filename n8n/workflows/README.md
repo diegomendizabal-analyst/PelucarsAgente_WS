@@ -10,6 +10,23 @@ El [workflow de recepción](recepcion-whatsapp.json) está sin publicar y tiene 
 
 Después de la prueba se retiró la comparación del texto comercial para las próximas entradas. Se comprobaron los filtros con datos sintéticos. La deduplicación conserva la clave formada por proveedor, número comercial e identificador externo del mensaje. La prueba de persistencia verificó por separado que repetir el ingreso devuelve el mismo registro con `created=false`.
 
+## Datos comerciales y score · validación aislada del 27/11/2026
+
+1. El borrador conserva el nombre de perfil del contacto cuyo identificador coincide con el remitente. La RPC `save_bot_lead_details` recibe el último entrante, la extracción completa y los atributos declarados. Guarda resumen, presupuesto, plazo, financiación, usado e interés en una transacción. El nombre sólo completa un cliente sin nombre. Los cuatro atributos nuevos admiten `null`. El catálogo se vincula dentro de la RPC cuando marca y modelo identifican una sola ficha del mismo origen.
+2. Tras `applied` o `unchanged` para la oportunidad y el corte esperados, el nodo **Calcular score** reutiliza el código del prototipo. `save_bot_score` recibe su evaluación completa y el mismo mensaje de corte. Un corte obsoleto, un conflicto, una cita inválida o una respuesta inesperada detiene el turno antes de la reserva. Para conciliar o reintentar, conservar la petición original. Ver [contrato comercial](../../docs/oportunidades-integracion.md) y [contrato del score](../../docs/bot-score.md).
+3. Se validó una oportunidad demo con seis mensajes. La extracción guardada y el nombre del evento original alimentaron sólo los nodos de persistencia y cálculo. Ambas RPC devolvieron `applied` y luego `unchanged` al repetir la misma entrada. Se conservó la misma evaluación y las fechas del cliente, oportunidad, interés y evaluación. Persistieron el nombre de perfil, USD 20.000 de presupuesto total, compra dentro de 15 días, negativa de usado y financiación, y un único interés con búsqueda Corolla y las características declaradas. Los cuatro atributos estructurados quedaron vacíos en esta extracción histórica y el interés quedó sin ficha vinculada.
+4. Se guardaron **50/100**, banda media, versión `pelucars_score_v1_prototipo`. El desglose fue plazo 20, búsqueda 15, presupuesto 15 e intención 0. Quedó registrada la falta de intención clasificable y tres evidencias literales vinculadas a sus mensajes. La comparación final verificó el mismo resumen, seis mensajes, tres reservas, tres envíos y estado `waiting_assignment`.
+
+La validación aislada usó datos ya guardados y las RPC reales.
+
+## Ensayo de la Ford Ranger en QA · OP-000064
+
+1. Se preparó una oportunidad demo para un cliente existente. Un único WhatsApp inició la conversación con historial vacío. El panel de QA y PostgREST mostraron Ford Ranger manual desde 2020, entrega de Volkswagen Amarok 2017, USD 12.000 a agregar, compra dentro de 45 días y financiación parcial. El interés conservó sus atributos y quedó sin ficha de catálogo vinculada.
+2. La evaluación guardada fue **70/100, banda alta**: plazo 10, intención de visita 30, búsqueda 15 y presupuesto 15. Las cuatro citas se verificaron contra el texto literal del entrante.
+3. El bot reservó el cierre en el primer cupo. El intento inicial quedó en `unknown` por un error de autenticación. Tras verificar el vencimiento y renovar la credencial, se comprobó su acceso al número y se envió una vez el texto de la misma reserva mediante una ejecución manual aislada. Meta lo aceptó y el destinatario confirmó la llegada al celular. El panel y PostgREST coincidieron en el resultado final: dos mensajes, cierre `sent` en el cupo 1, `reserved_slots=1`, `sent_count=1` y `waiting_assignment`.
+
+La exportación conserva los 35 nodos, sus parámetros funcionales y sus conexiones. El control de procesamiento estuvo habilitado durante la escucha manual y quedó deshabilitado al finalizar. El workflow sigue sin publicar. El alta automática y la reactivación a las 72 horas quedan fuera de este ensayo.
+
 ## Otras comprobaciones
 
 | Workflow | Resultado |
@@ -24,7 +41,7 @@ Después de la prueba se retiró la comparación del texto comercial para las pr
 | [Revisión del remitente](revision-remitente-demo.json) | En la demo anterior se verificaron tres cupos reservados, un envío y cuatro mensajes visibles en el historial. El reintento aislado del guardado de resumen devolvió `unchanged` y conservó `updated_at`. |
 | [Alta demo](alta-demo.json) | Se comprobaron las condiciones antes del alta. El cliente y la oportunidad de prueba quedaron sin asignación ni avisos. |
 
-Quedan pendientes la persistencia del score y sus evidencias, y la clasificación de un error local previo a un envío en la demo anterior.
+Sigue pendiente clasificar el error local previo a un envío en la demo anterior.
 
 ## Uso de la exportación
 
