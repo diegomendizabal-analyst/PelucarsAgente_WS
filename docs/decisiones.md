@@ -1,4 +1,6 @@
 # Decisiones vigentes — Pelucars
+
+Nota de implementación 27/11: el prototipo de score de #12 se reutiliza sin aprobar D08; hay persistencia comercial y lectura del panel preparadas localmente. D07, reparto de nuevos clientes, atribución de ventas y corrección/anulación no se resuelven por código. Notion V3/V2 consultados; lista para la reunión y distinción entre confirmado/propuesto en [oportunidades-integracion.md](oportunidades-integracion.md). Prohibiciones de esta sesión: no SQL/seed remoto, deploy, merge ni cambios a workflows/hosting/Meta.
 Actualizado el 24/11/2026. Fuentes vigentes: [alcance V3](referencias/alcance-v3-2026-11-24.md) y [modelo backend V2](referencias/modelo-backend-v2-2026-11-24.md), conservados tal como se recibieron. Las decisiones confirmadas en esta sesión prevalecen sobre sus propuestas. El estado de implementación de Reportes está en [reportes.md](reportes.md).
 
 El [registro anterior](historico/decisiones-2026-11-18.md) es histórico: sus identificadores D01–D19 no equivalen a los del alcance V2. El [modelo vigente](modelo-de-datos.md) sustituye el diseño inicial.

@@ -1,5 +1,29 @@
 # Continuidad — Reportes, 24/11/2026
 
+## Oportunidades: actualización 27/11/2026
+
+**Cierre del ensayo Ranger posterior:** OP-000064 pasó el contraste de ficha/PostgREST: datos comerciales, Ranger/Amarok separadas, USD 12.000 a agregar, score 70 con cuatro citas y dos mensajes. El saliente está confirmado como `sent`, cierre en cupo 1; no se afirma entrega/lectura. Se corrigió el bloqueo de rueda del chat cambiando `overscroll-behavior` a `auto`, con prueba focalizada de extremos, conversación corta y paginación/anclaje en chat largo. No se modificaron datos ni workflows. Hallazgos estéticos documentados para #16. Sigue pendiente la sesión real de vendedor habilitado/asignado; pruebas SQL existentes aprobadas. [Evidencia completa](qa-ficha-oportunidad.md#resultado-del-ensayo-ranger-y-scroll--2711).
+
+**Prioridad posterior al rediseño:** cerrar el ensayo funcional nuevo de #14/#15; #16 queda para después. Se verificó GitHub y se actualizó origin: #13 integrado en main ca40789, #14 y #15 abiertos sobre main. QA 3114 continúa; el usuario confirmó que cerró voluntariamente 3000. El chat de n8n prepara una nueva oportunidad demo para el caso Ranger/Amarok, USD 12.000 a agregar y score esperado 70/100; todavía falta la referencia y el resultado. Ver [pendientes concretos para integrar #14](qa-ficha-oportunidad.md#cierre-funcional-pendiente-y-ensayo-nuevo). Los cortes de PR/base descritos más abajo corresponden a la implementación anterior.
+
+**D07 aprobada, aún no implementada:** se leyeron [alcance V4](https://app.notion.com/p/425b6a1d71a48148a19adacf591e1d6d) y [modelo V3](https://app.notion.com/p/425b6a1d71a481089b99d407f6bd64f9). Continuidad por búsqueda y pausa fija de 72 horas por contacto/número comercial desde el cierre, incluso temprano. Mensajes durante pausa se conservan sin IA, respuesta o alta automática y no la prorrogan; nuevo ciclo sólo ante mensaje elegible, sin resetear cupos históricos. Preparar implementación atómica, migración/pruebas locales con tiempo controlado y handoff después del ensayo, en PR funcional separado. No confundir las referencias históricas de D07 pendiente de decisión con este estado nuevo.
+
+Se actualizó desde origin/main (b090581) antes de implementar. GitHub confirmó #11/#12 mergeados; se conservó wsp/ sin versionar. Primer incremento: [PR #13](https://github.com/diegomendizabal-analyst/PelucarsAgente_WS/pull/13), persistencia comercial con corte, reintentos y protección de ediciones. Segundo incremento: codex/panel-oportunidades-score, dependiente del primero, ficha estructurada, conversación paginada y score vigente por mensaje/versión.
+
+**Estado de desarrollo verificado el 27/11**: el usuario aplicó las migraciones de score, datos comerciales y lecturas del panel e informó `00-verificar.sql` con todos los resultados true. Las consultas reales de PostgREST funcionan. Este trabajo no aplicó SQL remoto, seed, deploy ni merge, ni modificó n8n, Meta, hosting, cuentas o datos comerciales remotos.
+
+### Rediseño de la ficha y QA de PR #14
+
+Se volvió a ejecutar fetch de origin y a consultar GitHub: #13 y #14 abiertos, #14 basado en `codex/oportunidades-completas`; main b090581 todavía no contiene esos incrementos. Implementación aislada en `.pr-work/qa-pr14-real`, rama local `codex/ficha-oportunidad-diseno`, destinada a actualizar el mismo #14. El checkout original y `wsp/` se conservaron. Se reutiliza Next en **3114**; el servidor del usuario en **3000** no se detuvo ni reemplazó.
+
+Ficha de prueba: http://127.0.0.1:3114/oportunidades/19f65c2c-a0d1-4e0f-8ee3-fef55f27ca13 — **OP-000063**, cuenta administradora habilitada y Datos demo visibles. Lectura real: nombre de perfil no verificado, presupuesto total USD 20.000, compra dentro de 15 días, sin usado ni financiación, score 50/100 Medio con tres evidencias y seis mensajes. El interés Corolla conserva `vehicle_id`, `requested_brand` y `requested_model` NULL: la extracción histórica no permite vincularlo al catálogo. No completar atributos leyendo el resumen.
+
+Score compacto en el encabezado con detalle accesible; resumen y campos agrupados; gestión a la derecha y desplegable en móvil; conversación en burbujas y orden ascendente por posición confirmada, páginas anteriores con cursor y anclaje de lectura; registros sin posición separados. No se cambiaron reglas, escrituras ni permisos. Pendiente de evaluación, valores sin informar y fallos de lectura son estados distintos. Ver [validación del rediseño](qa-ficha-oportunidad.md).
+
+Diagnóstico, contrato para n8n, pruebas y decisiones agrupadas de ventas: [oportunidades-integracion.md](oportunidades-integracion.md). D07 y asignación de nuevos clientes siguen pendientes. D08 conserva la versión del prototipo. Ventas continúa sin sales ni métricas reales: Notion marca atribución, corrección/anulación y fórmulas como decisiones/propuestas pendientes. No se habilitó un cierre ficticio ni se agregó actividades.
+
+Los apartados siguientes documentan cortes anteriores; no sustituyen esta actualización.
+
 ## Cierre del simulacro WhatsApp · 26/11/2026
 
 Se completaron tres turnos reales con un remitente autorizado. El historial mostró seis mensajes en orden, sin duplicados. El bot preguntó por el presupuesto, preguntó por el usado y cerró en el tercer cupo. El destinatario confirmó la recepción. La lectura final devolvió `waiting_assignment`, `reserved_slots=3` y `sent_count=3`. El resumen guardó Corolla automático desde 2022, presupuesto total de USD 20.000, compra dentro de 15 días, sin usado ni financiación. El workflow quedó sin publicar y con el procesamiento deshabilitado.

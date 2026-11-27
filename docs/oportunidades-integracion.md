@@ -61,6 +61,26 @@ Después del guardado, el otro chat puede llamar a `save_bot_score` con el contr
 
 `node --test frontend/scripts/database-local.test.mjs`: pasa, incluidas migraciones y regresiones existentes de identidad, inventario, CRM, recurrencia y reportes. No usa Supabase remoto.
 
+## Incremento 2: ficha, conversación, score y unidades
+
+Migración `20261127123630_opportunity_bot_read_model.sql`, aplicada por el usuario en desarrollo y verificada mediante lecturas reales del panel:
+
+- `get_current_lead_score(p_lead_id, p_rules_version)`: una evaluación por mayor posición del mensaje de corte dentro de esa versión. Devuelve total, resultado, evidencias y metadatos de corte/guardado. El panel fija explícitamente la versión de #12, sin modificar el cálculo. Lectura validada antes de renderizar; un resultado mal formado produce error, no cero.
+- `lead_messages`: vista invoker de mensajes/conversaciones. El panel lee los 20 mensajes recientes con posición durable y los presenta de antiguo a reciente; carga anteriores con `history_position < before` y un corte superior estable. Los registros sin posición tienen un apartado y cursor por UUID propios, sin atribuirles orden conversacional. Distingue pendientes, en curso, fallidos, inciertos y confirmados; nunca presenta un reservado como enviado ni afirma entrega/lectura.
+- `get_lead_unit_matches(p_lead_id,p_interest_ids)`: compara hasta 20 intereses visibles con unidades disponibles del modelo y del mismo origen. Cada unidad se evalúa entera: año mínimo/máximo, transmisión textual normalizada y presupuesto total en la misma moneda. Cuenta las que cumplen esos criterios, las que no los cumplen y las de evaluación incompleta. Una característica que falla descarta esa unidad; datos desconocidos, moneda diferente o dinero a agregar impiden confirmar presupuesto. Sin tipo de cambio ni tasación de usado. Otras características siguen requiriendo revisión humana.
+
+La ficha conserva una etiqueta discreta para demo y el nombre de perfil no verificado; agrupa presupuesto/alcance, plazo, usado/detalles y financiación nullable. Se retiró el placeholder de procedencia comercial: esa función queda para otra versión. El vínculo de marca/modelo se distingue de la comparación de unidades. Score sin evaluación aparece Pendiente; migración ausente y error de consulta son estados separados. No usa credenciales de servicio para leer ni comparte caché entre cuentas. La bandeja de pendientes conserva las cuatro columnas autorizadas.
+
+`GET /api/oportunidades/[id]/mensajes?before=<posición>&cutoff=<posición>` carga anteriores; `kind=unconfirmed&beforeId=<UUID>` pagina registros sin posición. La ruta vuelve a comprobar sesión habilitada, modo de origen y acceso al lead, usa RLS y responde con `private, no-store`. Un cursor inválido produce 400; lead invisible, 404; error de lectura, 503. El cliente conserva mensajes y anclaje al reintentar una lectura fallida; si pierde acceso, oculta el chat cargado. Actualizar inicia una nueva lectura de mensajes y estados. No hay caja de envío ni suscripción de tiempo real.
+
+### Verificación ejecutada del panel
+
+- `node --test frontend/scripts/opportunity-score.test.mjs`: pasa en PostgreSQL WASM aislado. Guardar una evaluación vieja después no cambia la vigente; versiones separadas, citas vinculadas, ausencia sin cero, rechazo de escritura por usuario, admin/responsable/ajeno/deshabilitado/anónimo y pérdida de acceso a score, citas, mensajes y conteos tras reasignación. Comparación sobre la misma unidad, retiro de stock, moneda diferente, precio ausente y dinero a agregar.
+- `npm run lint`, `npm run typecheck` y `npm run build` desde frontend: pasan; build vuelve a verificar tipos. Aviso de Node MODULE_TYPELESS_PACKAGE_JSON en las pruebas TypeScript, sin fallo.
+- `npm run check:opportunities`: 24 casos en Chrome sin ventana, anchos 1440/768/390/320, estados completo/vacío/cero/error/integración pendiente/cargando. Usa **componentes reales con adaptadores de lectura sintéticos**, CSS y tipografía del proyecto, en un puerto libre propio. Importes y textos largos, ausencia de desborde, foco visible y paginación mediante Enter conservando los otros paginadores. Capturas revisadas visualmente; se corrigió la grilla móvil de datos a una columna para fechas/importes legibles. Artefactos locales en `.pr-work/opportunity-ui/`, fuera de la carpeta que limpia el build.
+
+La validación anterior correspondía a componentes aislados. Se añadió QA de Next/PostgREST reales y del chat hidratado: ver [evidencia y límites actuales](qa-ficha-oportunidad.md). No se ejecutan mutaciones remotas de prueba. La pantalla ya renderizada necesita Actualizar para reflejar cambios externos; cada nueva lectura respeta RLS y una denegación al paginar oculta el chat.
+
 ## Ventas: siguiente incremento condicionado
 
 Confirmado: ventas explícitas, vinculadas con oportunidad, cliente derivado de esa oportunidad, vendedor histórico y unidad; cierre de oportunidad/unidad transaccional; reportes totales y por vendedor, preservando monedas. El estado `sold` de una oportunidad no es una venta contabilizable. No inferir ventas de esa etiqueta ni del precio de lista. No existe `sales` en main ni al terminar este incremento.

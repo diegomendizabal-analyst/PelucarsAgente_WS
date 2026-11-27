@@ -1,5 +1,7 @@
 # Persistencia del score del bot
 
+Lectura preparada el 27/11: get_current_lead_score(p_lead_id, p_rules_version) devuelve cero o una fila con total, resultado, evidencias y mensaje/posición/fecha de corte. El panel solicita explícitamente pelucars_score_v1_prototipo; nunca elige una versión por orden alfabético ni una evaluación por fecha de guardado. La RPC es invoker, sólo authenticated; RLS decide por responsable actual/admin. No copia ni reconstruye retrospectivamente score de asignación/cierre. Migración 20261127123630_opportunity_bot_read_model.sql **pendiente de aplicar**. Prueba local de guardado tardío y reasignación pasa; no cambió el contrato de save_bot_score ni el workflow remoto.
+
 La [migración para revisar](../supabase/migrations/20261126151500_bot_score_evaluations.sql) guarda una evaluación completa y sus citas en una transacción. Usa la salida del nodo **Calcular score** de la [prueba de recepción](../n8n/workflows/recepcion-bot.json). La versión se conserva como `pelucars_score_v1_prototipo`. La aprobación comercial de D08 sigue pendiente.
 
 ## Contrato para n8n

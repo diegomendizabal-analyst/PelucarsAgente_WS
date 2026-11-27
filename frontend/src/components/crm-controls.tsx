@@ -46,3 +46,11 @@ export function ManageLead({lead,assignees,admin}:{lead:Lead;assignees:{id:strin
     </>}
   </div></section>;
 }
+
+export function OpportunityManagement({children}:{children:React.ReactNode}) {
+  const [expanded,setExpanded]=useState(false);
+  return <aside className="op-management" aria-label="Gestión de la oportunidad">
+    <button type="button" className="op-management-toggle" aria-expanded={expanded} aria-controls="op-management-content" onClick={()=>setExpanded(!expanded)}>{expanded ? 'Cerrar gestión de la oportunidad' : 'Gestionar responsable y estado'}<span aria-hidden="true">{expanded ? '−' : '+'}</span></button>
+    <div id="op-management-content" className="op-management-content" data-expanded={expanded}>{children}</div>
+  </aside>;
+}
