@@ -1,5 +1,7 @@
 # Persistencia de la recepción del bot
 
+Actualización local 27/11: para nuevas extracciones completas, usar save_bot_lead_details según [contrato de oportunidades](oportunidades-integracion.md); llama internamente a save_bot_lead_summary y agrega datos comerciales/interés atómicamente. La RPC anterior sigue disponible. El panel obtiene mensajes con estado de envío desde lead_messages con RLS y paginación de 20. Ambas migraciones nuevas están **pendientes de aplicar**; no se modificó el workflow remoto.
+
 La migración `20261125132536_bot_conversations_messages.sql` agrega conversaciones por oportunidad y mensajes de texto por conversación. El primer ingreso crea la conversación y el mensaje en una transacción. El workflow debe aportar un UUID de conversación estable y una oportunidad existente elegida explícitamente. El teléfono en formato E.164 y el origen deben coincidir con el cliente y la oportunidad. D07 sigue pendiente para el enrutamiento de conversaciones reales. En la demo se usa un UUID fijo, un lead de origen `demo` y un espacio de identificadores de proveedor de prueba.
 
 ## Contrato para n8n

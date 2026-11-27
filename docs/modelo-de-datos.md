@@ -1,5 +1,13 @@
 ﻿# Modelo de datos vigente — 24/11/2026
 
+## Actualización de implementación — 27/11/2026
+
+El corte histórico inferior precede a bot y score. main en b090581 ya incluye conversations, messages, score_evaluations, score_evidence y la procedencia privada del resumen (#11/#12 verificados). Su presencia en Git no demuestra que las últimas migraciones estén aplicadas remotamente.
+
+Incrementos locales para revisión: leads.budget_scope, trade_in_decision; customers.provider_profile_name; lead_interests.requested_brand, requested_model, characteristics[]; tabla privada de procedencia y RPC save_bot_lead_details. La restricción de presupuesto admite datos parciales, preservando NULL/cero. Se añade get_current_lead_score(lead,version) y vista invoker lead_messages sobre las entidades existentes. No hay nueva tabla de score ni motor alternativo. Contratos y límites en [oportunidades-integracion.md](oportunidades-integracion.md).
+
+Ventas/ofertas, captura histórica de score al asignar y reglas de atribución/corrección siguen **pendientes**, no implementadas por estas migraciones. Fuentes V3/V2 de Notion consultadas el 27/11; sus propuestas no se promueven automáticamente a decisiones aprobadas.
+
 Fuentes vigentes: [modelo backend V2](referencias/modelo-backend-v2-2026-11-24.md) y [alcance V3](referencias/alcance-v3-2026-11-24.md), conservados tal como se recibieron. El [modelo reconciliado del 20/11](historico/modelo-de-datos-2026-11-20.md) queda como antecedente, incluyendo su diseño de actividades; no define el incremento actual.
 
 ## Implementado antes de Reportes

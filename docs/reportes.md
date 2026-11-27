@@ -1,5 +1,7 @@
 # Reportes — primer incremento, 24/11/2026
 
+Actualización 27/11: score individual y datos comerciales de la oportunidad preparados en incrementos locales separados ([detalle](oportunidades-integracion.md)). Esto **no completa R06**: distribución, resultados por score al asignar y snapshots requieren su propia fuente/regla. Ventas tampoco se contabiliza desde commercial_status=sold; sigue sin registros sales, y sus KPI permanecen No disponible hasta cerrar las decisiones documentadas. No se cambiaron fórmulas ni se inventaron ventas para poblar Reportes.
+
 Rama `reportes-primer-incremento`, base `fa4be36` de main. Frontend local y migraciones aplicadas a Supabase con autorización posterior explícita. Los adjuntos se conservan en [alcance V3](referencias/alcance-v3-2026-11-24.md) y [modelo V2](referencias/modelo-backend-v2-2026-11-24.md); esta página registra el avance posterior a esas referencias.
 
 ## Decisiones confirmadas en esta sesión

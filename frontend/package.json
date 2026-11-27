@@ -13,6 +13,8 @@
     "test:exchange": "node --test scripts/exchange.test.mjs",
     "test:inventory": "node --test scripts/inventory-validation.test.mjs",
     "test:crm": "node --test scripts/crm-validation.test.mjs",
+    "test:opportunities": "node --test scripts/opportunity-intake.test.mjs scripts/opportunity-score.test.mjs",
+    "check:opportunities": "node scripts/check-opportunity-ui.mjs",
     "demo:load": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ../scripts/supabase-admin.ps1 -Action LoadCrmDemo",
     "demo:reset": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ../scripts/supabase-admin.ps1 -Action ResetCrmDemo",
     "check:auth": "node scripts/check-auth.mjs",

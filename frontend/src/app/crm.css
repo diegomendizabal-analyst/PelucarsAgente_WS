@@ -56,6 +56,30 @@
 .crm-timeline p { font-size:14px; margin:6px 0; white-space:pre-wrap; }
 .crm-timeline small { font-size:12px; color:var(--muted); }
 .crm-detail-main .details-grid dd { font-size:14px; color:var(--foreground); overflow-wrap:anywhere; }
+.crm-detail-note { display:block; margin-top:10px; font-size:12px; color:var(--muted); line-height:1.6; overflow-wrap:anywhere; }
+.crm-unit-match { margin-top:14px; padding-top:14px; border-top:1px solid var(--line); font-size:13px; overflow-wrap:anywhere; }
+.crm-unit-match p { margin-top:6px; }
+.crm-unit-match small { display:block; margin-top:8px; color:var(--muted); }
+.crm-score { padding:20px 26px; overflow-wrap:anywhere; }
+.crm-score-total { display:flex; flex-wrap:wrap; align-items:center; gap:16px; }
+.crm-score-total > strong { font-size:32px; font-variant-numeric:tabular-nums; line-height:1.2; }
+.crm-score-total > strong > span { font-size:16px; font-weight:500; color:var(--muted); }
+.crm-score-breakdown { margin:20px 0; }
+.crm-score-breakdown > div { border-top:1px solid var(--line); padding:14px 0; }
+.crm-score-breakdown dt { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; font-weight:650; }
+.crm-score-breakdown dd { margin:6px 0 0; font-size:13px; color:var(--muted); }
+.crm-score-breakdown blockquote { border-left:2px solid var(--line); padding:6px 12px; margin-top:8px; color:var(--foreground); white-space:pre-wrap; }
+.crm-score-limitations { border-top:1px solid var(--line); padding-top:16px; font-size:13px; }
+.crm-score-limitations h3 { font-size:14px; }
+.crm-score-limitations ul { padding-left:20px; }
+.crm-score-limitations p { margin-top:8px; color:var(--muted); }
+.crm-messages { list-style:none; padding:0 26px; margin:0; }
+.crm-messages li { border-bottom:1px solid var(--line); padding:20px 0; overflow-wrap:anywhere; }
+.crm-messages li:last-child { border-bottom:0; }
+.crm-messages header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.crm-messages time,.crm-messages small { font-size:12px; color:var(--muted); }
+.crm-messages p { margin-top:10px; white-space:pre-wrap; }
+.crm-message-bot p { padding-left:14px; border-left:2px solid var(--line); }
 .assignment-notifications { position:relative; }
 .assignment-notifications > summary { display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer; width:40px; height:40px; border:1px solid var(--line); border-radius:8px; list-style:none; }
 .assignment-notifications > summary::-webkit-details-marker { display:none; }
@@ -74,6 +98,9 @@
 .notification-panel .icon-button { display:grid; place-items:center; border:0; background:transparent; padding:6px; cursor:pointer; }
 @media(max-width:1100px) { .crm-detail-layout { grid-template-columns:minmax(0,1fr); } .crm-pending-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
 @media(max-width:600px) {
+  .crm-detail-main .details-grid { grid-template-columns:minmax(0,1fr); }
+  .crm-score { padding:20px; }
+  .crm-messages { padding-inline:20px; }
   .crm-tabs { flex-wrap:wrap; gap:0 18px; }
   .crm-tabs a { padding-block:12px; white-space:normal; overflow-wrap:anywhere; }
   .crm-interest { margin:0 18px; padding:20px 0; }

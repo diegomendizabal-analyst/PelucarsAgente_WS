@@ -61,6 +61,24 @@ Después del guardado, el otro chat puede llamar a `save_bot_score` con el contr
 
 `node --test frontend/scripts/database-local.test.mjs`: pasa, incluidas migraciones y regresiones existentes de identidad, inventario, CRM, recurrencia y reportes. No usa Supabase remoto.
 
+## Incremento 2: ficha, conversación, score y unidades
+
+Migración local pendiente `20261127123630_opportunity_bot_read_model.sql`:
+
+- `get_current_lead_score(p_lead_id, p_rules_version)`: una evaluación por mayor posición del mensaje de corte dentro de esa versión. Devuelve total, resultado, evidencias y metadatos de corte/guardado. El panel fija explícitamente la versión de #12, sin modificar el cálculo. Lectura validada antes de renderizar; un resultado mal formado produce error, no cero.
+- `lead_messages`: vista invoker de mensajes/conversaciones; el panel pagina de a 20, conserva los tres paginadores al navegar y distingue salientes pendientes, en curso, fallidos, inciertos y confirmados. Los no confirmados aparecen primero; el diálogo confirmado se ordena por posición durable descendente. No presenta mensajes reservados como enviados.
+- `get_lead_unit_matches(p_lead_id,p_interest_ids)`: compara hasta 20 intereses visibles con unidades disponibles del modelo y del mismo origen. Cada unidad se evalúa entera: año mínimo/máximo, transmisión textual normalizada y presupuesto total en la misma moneda. Cuenta las que cumplen esos criterios, las que no los cumplen y las de evaluación incompleta. Una característica que falla descarta esa unidad; datos desconocidos, moneda diferente o dinero a agregar impiden confirmar presupuesto. Sin tipo de cambio ni tasación de usado. Otras características siguen requiriendo revisión humana.
+
+La ficha muestra origen técnico por separado de procedencia comercial no identificada, nombre de perfil no verificado, presupuesto/alcance, cuatro estados del usado y financiación nullable. El vínculo de marca/modelo se distingue de la comparación de unidades. Score sin evaluación aparece Pendiente; migración ausente y error de consulta son estados separados. No usa credenciales de servicio para leer ni comparte caché entre cuentas. La bandeja de pendientes conserva las cuatro columnas autorizadas.
+
+### Verificación ejecutada del panel
+
+- `node --test frontend/scripts/opportunity-score.test.mjs`: pasa en PostgreSQL WASM aislado. Guardar una evaluación vieja después no cambia la vigente; versiones separadas, citas vinculadas, ausencia sin cero, rechazo de escritura por usuario, admin/responsable/ajeno/deshabilitado/anónimo y pérdida de acceso a score, citas, mensajes y conteos tras reasignación. Comparación sobre la misma unidad, retiro de stock, moneda diferente, precio ausente y dinero a agregar.
+- `npm run lint`, `npm run typecheck` y `npm run build` desde frontend: pasan; build vuelve a verificar tipos. Aviso de Node MODULE_TYPELESS_PACKAGE_JSON en las pruebas TypeScript, sin fallo.
+- `npm run check:opportunities`: 24 casos en Chrome sin ventana, anchos 1440/768/390/320, estados completo/vacío/cero/error/integración pendiente/cargando. Usa **componentes reales con adaptadores de lectura sintéticos**, CSS y tipografía del proyecto, en un puerto libre propio. Importes y textos largos, ausencia de desborde, foco visible y paginación mediante Enter conservando los otros paginadores. Capturas revisadas visualmente; se corrigió la grilla móvil de datos a una columna para fechas/importes legibles. Artefactos locales en `.pr-work/opportunity-ui/`, fuera de la carpeta que limpia el build.
+
+Límites: la revisión visual aislada no prueba Auth/PostgREST ni hidratación/navegación del servidor Next conectado; no ejecuta mutaciones desde navegador. No se aplicaron migraciones para forzar esa prueba remota. El contrato SQL y RLS se prueban en PostgreSQL; queda una prueba integrada con PostgREST/Next en un entorno autorizado después de aplicar migraciones. No se hizo nueva prueba multisesión ni de carga. La pantalla ya renderizada conserva la limitación previa: debe actualizarse para reflejar una reasignación externa; las nuevas lecturas pierden acceso inmediatamente por RLS.
+
 ## Ventas: siguiente incremento condicionado
 
 Confirmado: ventas explícitas, vinculadas con oportunidad, cliente derivado de esa oportunidad, vendedor histórico y unidad; cierre de oportunidad/unidad transaccional; reportes totales y por vendedor, preservando monedas. El estado `sold` de una oportunidad no es una venta contabilizable. No inferir ventas de esa etiqueta ni del precio de lista. No existe `sales` en main ni al terminar este incremento.

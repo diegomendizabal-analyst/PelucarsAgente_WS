@@ -1,5 +1,15 @@
 # Continuidad — Reportes, 24/11/2026
 
+## Oportunidades: actualización 27/11/2026
+
+Se actualizó desde origin/main (b090581) antes de implementar. GitHub confirmó #11/#12 mergeados; se conservó wsp/ sin versionar. Primer incremento: [PR #13](https://github.com/diegomendizabal-analyst/PelucarsAgente_WS/pull/13), persistencia comercial con corte, reintentos y protección de ediciones. Segundo incremento: codex/panel-oportunidades-score, dependiente del primero, ficha estructurada, conversación paginada y score vigente por mensaje/versión.
+
+**Migraciones locales pendientes**: 20261127123402_bot_lead_details.sql y 20261127123630_opportunity_bot_read_model.sql. Antes de integrarlas comprobar en otro trabajo autorizado si las migraciones previas de resumen y score están aplicadas; el merge no acredita aplicación. No se aplicó SQL remoto, seed, deploy ni merge, ni se modificó n8n, Meta, hosting, cuentas o datos comerciales remotos.
+
+Diagnóstico, contrato para n8n, pruebas y decisiones agrupadas de ventas: [oportunidades-integracion.md](oportunidades-integracion.md). D07 y asignación de nuevos clientes siguen pendientes. D08 conserva la versión del prototipo. Ventas continúa sin sales ni métricas reales: Notion marca atribución, corrección/anulación y fórmulas como decisiones/propuestas pendientes. No se habilitó un cierre ficticio ni se agregó actividades.
+
+Los apartados siguientes documentan cortes anteriores; no sustituyen esta actualización.
+
 ## Cierre del simulacro WhatsApp · 26/11/2026
 
 Se completaron tres turnos reales con un remitente autorizado. El historial mostró seis mensajes en orden, sin duplicados. El bot preguntó por el presupuesto, preguntó por el usado y cerró en el tercer cupo. El destinatario confirmó la recepción. La lectura final devolvió `waiting_assignment`, `reserved_slots=3` y `sent_count=3`. El resumen guardó Corolla automático desde 2022, presupuesto total de USD 20.000, compra dentro de 15 días, sin usado ni financiación. El workflow quedó sin publicar y con el procesamiento deshabilitado.

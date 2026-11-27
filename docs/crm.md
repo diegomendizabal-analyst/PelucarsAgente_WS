@@ -1,5 +1,7 @@
 # Clientes y oportunidades — primera etapa conectada
 
+Actualización local 27/11: la ficha incorpora presupuesto con alcance, decisión explícita sobre usado, procedencia del nombre, atributos de interés, mensajes paginados y score con corte/versión/desglose/citas/limitaciones. Sin evaluación muestra Pendiente. Lectura con sesión del usuario y RLS; el servidor no usa service role. Requiere las dos migraciones pendientes documentadas en [oportunidades-integracion.md](oportunidades-integracion.md). El resto de esta página conserva el corte anterior. No se habilitaron ventas ni actividades.
+
 Actualización 24/11: Reportes es el inicio del admin y la bandeja se trasladó a `/oportunidades`. La ficha de vehículo lista oportunidades con intereses activos, propias para vendedor y todas para admin, con RLS antes de contar/paginar. Resumen de la consulta reemplaza el rótulo Nota. Actividades, agenda y contadores de recontacto son posteriores; se conserva el historial automático. Compras y score mantienen su integración pendiente. Estado y validaciones actuales en [reportes.md](reportes.md); los apartados siguientes describen la entrega CRM anterior.
 
 Rama `backend-clientes-oportunidades`, iniciada desde `main` tras el merge del PR #4. Migración `20261120141656_customers_and_opportunities.sql`, aplicada en Supabase el 20/11/2026. El ingreso de consultas sigue pendiente. Posteriormente se autorizó una carga explícita de [datos de prueba persistentes](pruebas-crm.md), separada de las migraciones y del alta manual desde la interfaz.
