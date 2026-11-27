@@ -17,7 +17,15 @@ Después de la prueba se retiró la comparación del texto comercial para las pr
 3. Se validó una oportunidad demo con seis mensajes. La extracción guardada y el nombre del evento original alimentaron sólo los nodos de persistencia y cálculo. Ambas RPC devolvieron `applied` y luego `unchanged` al repetir la misma entrada. Se conservó la misma evaluación y las fechas del cliente, oportunidad, interés y evaluación. Persistieron el nombre de perfil, USD 20.000 de presupuesto total, compra dentro de 15 días, negativa de usado y financiación, y un único interés con búsqueda Corolla y las características declaradas. Los cuatro atributos estructurados quedaron vacíos en esta extracción histórica y el interés quedó sin ficha vinculada.
 4. Se guardaron **50/100**, banda media, versión `pelucars_score_v1_prototipo`. El desglose fue plazo 20, búsqueda 15, presupuesto 15 e intención 0. Quedó registrada la falta de intención clasificable y tres evidencias literales vinculadas a sus mensajes. La comparación final verificó el mismo resumen, seis mensajes, tres reservas, tres envíos y estado `waiting_assignment`.
 
-La validación usó datos ya guardados y las RPC reales. El recorrido con un nuevo mensaje y el esquema ampliado del extractor sigue pendiente. El workflow de recepción permanece sin publicar, con el procesamiento deshabilitado.
+La validación aislada usó datos ya guardados y las RPC reales.
+
+## Ensayo de la Ford Ranger en QA · OP-000064
+
+1. Se preparó una oportunidad demo para un cliente existente. Un único WhatsApp inició la conversación con historial vacío. El panel de QA y PostgREST mostraron Ford Ranger manual desde 2020, entrega de Volkswagen Amarok 2017, USD 12.000 a agregar, compra dentro de 45 días y financiación parcial. El interés conservó sus atributos y quedó sin ficha de catálogo vinculada.
+2. La evaluación guardada fue **70/100, banda alta**: plazo 10, intención de visita 30, búsqueda 15 y presupuesto 15. Las cuatro citas se verificaron contra el texto literal del entrante.
+3. El bot reservó el cierre en el primer cupo. El intento inicial quedó en `unknown` por un error de autenticación. Tras verificar el vencimiento y renovar la credencial, se comprobó su acceso al número y se envió una vez el texto de la misma reserva mediante una ejecución manual aislada. Meta lo aceptó y el destinatario confirmó la llegada al celular. El panel y PostgREST coincidieron en el resultado final: dos mensajes, cierre `sent` en el cupo 1, `reserved_slots=1`, `sent_count=1` y `waiting_assignment`.
+
+La exportación conserva los 35 nodos, sus parámetros funcionales y sus conexiones. El control de procesamiento estuvo habilitado durante la escucha manual y quedó deshabilitado al finalizar. El workflow sigue sin publicar. El alta automática y la reactivación a las 72 horas quedan fuera de este ensayo.
 
 ## Otras comprobaciones
 
