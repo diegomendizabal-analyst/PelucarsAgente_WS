@@ -1,6 +1,6 @@
 # Ensayo de recepción D07
 
-El workflow **Pelucars — Recepción WhatsApp de prueba** conserva su único trigger, la línea de prueba, los dos remitentes autorizados y el origen fijo `demo`. El borrador y la exportación tienen el procesamiento apagado. La exportación usa marcadores de configuración, sin credenciales, historial de ejecución ni identificadores del entorno.
+El workflow **Pelucars — Recepción WhatsApp de prueba** conserva su único trigger, la línea de prueba, el remitente histórico autorizado sólo para silencio y el origen fijo `demo`. El borrador y la exportación tienen el procesamiento apagado. La exportación usa marcadores de configuración, sin credenciales, historial de ejecución ni identificadores del entorno.
 
 **Qué cambia.** Se guardan los textos y los pies de foto, video o documento, en orden dentro de cada lote y con el ID original del proveedor. Se conserva la redacción literal, incluidos espacios, saltos, emojis y correcciones. Las notificaciones de estado van por separado. Audio, stickers y archivos sin texto quedan fuera del contrato actual. Para una recepción continua hace falta habilitar el trigger de forma coordinada; una escucha manual puede terminar entre dos mensajes.
 
@@ -9,6 +9,14 @@ Supabase deduplica el ingreso. Sólo un recibo pendiente tomado con `claimed=tru
 La clasificación consulta las oportunidades abiertas del teléfono y origen autorizados. Una compra adicional requiere una declaración explícita. Con varias abiertas se exige una referencia distintiva; una decisión ambigua termina en revisión. Sólo una resolución comercial devuelve los IDs usados por el extractor, el guardado comercial, el score y la reserva. El historial se pagina con corte exclusivo anterior al entrante. Un conflicto en la resolución relee el turno y detiene la ejecución para conciliar con la petición guardada.
 
 Se decide con `get_bot_contact_turn.reserved_slots`. El cupo 3 sólo admite cierre. Reservar el cierre, incluso en el cupo 1, inicia la pausa en la misma transacción. Ante un conflicto de reserva se busca la respuesta ya guardada. Si el contador avanzó, se recalcula sin volver a IA. Una reserva distinta o un conflicto sin avance requieren conciliación. Sólo una toma de envío positiva permite el intento externo. Un resultado incierto conserva el cupo y requiere revisión; la aceptación de Meta y la llegada al celular se verifican por separado.
+
+## Retiro del remitente temporal después del ensayo
+
+Por pedido del usuario, se retiró el remitente familiar de las rutas de entrada y de notificaciones de estado, incluida su representación alternativa. La consulta auxiliar de elegibilidad también dejó de incluirlo. El remitente histórico conserva su control de silencio; no queda una ruta comercial habilitada para el participante retirado. El procesamiento permanece apagado y el workflow sin publicar. No se borraron mensajes, oportunidades ni evidencias del ensayo.
+
+La exportación refleja esa retirada. Se comprobó con datos ficticios que las dos variantes retiradas no producen salida del filtro de mensajes ni del de estados. La prueba de regresión del lote mixto se actualizó para exigir esa exclusión; no se repitió el ensayo remoto ni se invocó IA. La lista de destinatarios de prueba de Meta se administra por separado: su eliminación allí queda pendiente de realizar/verificar desde Meta Developers.
+
+Los pasos siguientes describen la preparación y ejecución histórica. Para otro ensayo comercial será necesario autorizar explícitamente otro remitente; no reponer el temporal retirado al importar.
 
 ## Antes del ensayo
 
