@@ -1,6 +1,6 @@
 # D07: continuidad por búsqueda y pausa de 72 horas
 
-Estado: implementación local para revisión en un PR funcional separado, basada en `origin/main` `2053064` (#13/#14/#15 integrados). **Migración no aplicada remotamente; workflow no modificado ni habilitado.** QA 3114 permanece en main. #16 sigue reservado para diseño.
+Estado actualizado después del ensayo del 27/11: backend #17 y adaptación n8n #19 pendientes de integrar. El operador aplicó la migración en desarrollo; OP-000066 y el silencio de OP-000065 fueron contrastados con QA, PostgREST y ejecuciones guardadas. [Evidencia y límites de la validación](qa-d07.md). Workflow apagado y sin publicar. Este control no aplicó migraciones ni modificó datos/workflows. QA 3114 está actualizado a `origin/main` `de3b770`; #16 sigue reservado para diseño.
 
 Se leyeron completas la [decisión aprobada, alcance V4](https://app.notion.com/p/425b6a1d71a48148a19adacf591e1d6d) y la [especificación backend V3](https://app.notion.com/p/425b6a1d71a481089b99d407f6bd64f9). La aprobación del responsable del proyecto sustituye la propuesta histórica de siete días; no se atribuye aprobación comercial a Pelucars.
 
@@ -99,6 +99,6 @@ Esto limita cantidad de pipelines admitidos, **no mide pesos/dólares ni garanti
 
 Regresiones pertinentes: persistencia comercial/score, mensajes/cursores, esquema y SQL CRM/Reportes; y runner nativo de conversaciones. No hay cambios de interfaz que justifiquen repetir capturas o build. QA 3114 sigue con los datos reales previamente validados en main; estas muestras se crean sólo dentro de bases efímeras.
 
-Pendiente de integración: aplicar sólo con autorización, configurar límites, adaptar n8n al contrato y hacer ensayo HTTP/WhatsApp coordinado. Las pruebas SQL locales no acreditan ese recorrido remoto.
+El ensayo HTTP/WhatsApp ya se realizó en desarrollo mediante #19 y se contrastó en [QA D07](qa-d07.md). La preparación anterior sigue aplicando a otros entornos: no inferir migraciones/configuración por merge ni habilitar recepción general. La reactivación remota a las 72h y la repetición remota del mismo ID no se ejecutaron en este intercambio; mantienen evidencia local con tiempo controlado.
 
 Resultado efectivo del 27/11: **12 pruebas Node/PostgreSQL WASM aprobadas** (4 D07 y 8 regresiones de persistencia, lectura/paginación y SQL existente). **PostgreSQL nativo 17.12 aprobado**: suite D07 concurrente, incluida competencia por el límite global de procesamiento; y runner existente de identidad/CRM/recurrencia, ingreso, cupos/cierre, historial, resumen y RLS. Clústeres temporales detenidos al terminar. Se corrigieron en el runner las opciones de socket y comparación de rutas para Windows; no se reemplazaron servicios del usuario. Docker no estaba disponible y se usó un binario PostgreSQL local aislado. No se repitió build/QA visual al no cambiar la interfaz.

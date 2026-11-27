@@ -1,6 +1,6 @@
 # Handoff D07 para n8n
 
-Contrato revisable: [bot-d07.md](bot-d07.md). Migración local `20261127153553_bot_contact_cycles_72h.sql`, **sin aplicar remotamente**. No se modificaron workflows. Sustituye el uso de UUID fijos de oportunidad/conversación para recepción general; no mezclar con el trabajo visual #16.
+Contrato revisable: [bot-d07.md](bot-d07.md). Migración `20261127153553_bot_contact_cycles_72h.sql` aplicada en desarrollo por el operador; adaptación n8n en #19 y ensayo remoto contrastado el 27/11: [evidencia y pendientes](qa-d07.md). El workflow quedó apagado y sin publicar. Este control no cambió workflows ni datos. Sustituye el uso de UUID fijos de oportunidad/conversación para recepción general; no mezclar con el trabajo visual #16. Otros entornos requieren su propia preparación autorizada.
 
 ## Secuencia obligatoria
 
@@ -35,8 +35,10 @@ Ejemplo de ingreso (identificadores ilustrativos; no ejecutar contra desarrollo 
 - Acordar los límites de ventana/contacto/línea y configurarlos en la tabla privada; no hay defaults de producción. Mantener límites de tokens, salida, reintentos y presupuesto del proveedor/n8n. El contador SQL limita pipelines, no el costo base de cada webhook ni el precio de IA.
 - Mantener el procesamiento deshabilitado hasta revisar la adaptación. Alta manual, agenda y notificaciones nuevas no son requisitos de este cambio.
 
-## Ensayo remoto pendiente, a coordinar después de aplicar
+## Cobertura del ensayo remoto
 
-Comprobar por RPC HTTP y panel: primera consulta comercial y otra no comercial; misma búsqueda y cambio de preferencia; cierre temprano y resultado de envío; entrada durante pausa conservada sin llamadas de IA; duplicados sin consumo extra; nueva entrada elegible que crea otro ciclo sin reset histórico. No usar sleeps de 72h ni un reloj configurable remoto para simular límites: esos extremos se acreditan en PostgreSQL local con tiempo controlado. La verificación operativa remota debe respetar el tiempo real o un plan de prueba aprobado por separado.
+El ensayo acreditó primera consulta comercial, continuidad y cambio de preferencia, cierre en cupo 3, tres envíos registrados y entrada durante pausa sin IA/respuesta ni prórroga. Ver [QA D07](qa-d07.md). No se repitieron envíos para este contraste.
+
+No quedaron acreditados por este intercambio remoto: consulta no comercial aislada, cierre temprano bajo D07, duplicado del mismo ID de proveedor y nuevo ciclo después de 72h. Los extremos y concurrencia tienen pruebas locales ya ejecutadas. No usar sleeps de 72h ni un reloj configurable remoto para simular límites. Cualquier ampliación del ensayo requiere coordinación separada; no es permiso para escribir o enviar al leer este handoff.
 
 No se solicita publicar, enviar WhatsApp, alterar datos existentes ni ejecutar migraciones como parte de leer este handoff.

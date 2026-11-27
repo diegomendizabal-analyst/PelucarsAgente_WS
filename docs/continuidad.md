@@ -1,5 +1,11 @@
 # Continuidad — Reportes, 24/11/2026
 
+## D07 — ensayo remoto contrastado, 27/11
+
+OP-000066 pasó ficha real de Next QA3114 contra PostgREST: Civic automático desde 2019, USD 18.000 de presupuesto total, Gol 2015 como usado, 20 días, financiación no, intención de visita, resumen, score 80 (20 + 30 + 15 + 15), cinco citas y seis mensajes. Tres cupos y tres envíos `sent` con ID del proveedor y fecha. OP-000065 conserva el entrante silenciado como séptimo mensaje, tres cupos y tres envíos; la ejecución 122 terminó en `paused` sin toma/IA/respuesta y el vencimiento coincide con cierre original +72h. [Validación, cobertura y cierre de #17/#19](qa-d07.md).
+
+Actualizados checkout principal y QA a `origin/main` `de3b770`, sin reemplazar el proceso 3114 ni tocar `wsp/`. Se reconcilió el conflicto documental de #17 con los acuerdos de #20, conservando D07 y D08/D16/D20. El operador aplicó/configuró desarrollo y el chat de n8n realizó el ensayo; este contraste sólo leyó datos y ejecuciones existentes. No se repitieron suites, envíos ni migraciones. #19 sigue borrador dependiente de #17; revisión e integración pendientes, sin habilitar recepción general. Los apartados siguientes son cortes anteriores.
+
 ## D07 — incremento funcional separado, 27/11
 
 #13/#14/#15 están integrados en `origin/main` `2053064`. El checkout principal y QA3114 quedaron en ese commit, conservando `wsp/` y el mismo proceso Next. D07 se prepara en `codex/d07-pausa-72h`, worktree `.pr-work/d07-pausa`; no se incorpora #16 ni se cambia QA.
