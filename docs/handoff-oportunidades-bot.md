@@ -1,5 +1,7 @@
 # Para el chat de n8n — 27/11/2026
 
+Actualización posterior al ensayo D07: #13/#14/#15 integrados; QA actualizado a main `de3b770`. El operador aplicó D07 en desarrollo y #19 adapta n8n: [handoff vigente](handoff-d07-n8n.md) y [contraste independiente de OP-000065/66](qa-d07.md). Workflow nuevamente apagado/sin publicar. El contrato comercial se conserva; el ingreso D07 sustituye `receive_bot_message` para contactos gestionados. Los apartados siguientes documentan el corte anterior a D07 y no indican el estado actual de los PR ni autorizan habilitar otro entorno.
+
 PR #13 y #14 siguen abiertos al verificar el 27/11. El usuario ya aplicó las migraciones en Supabase de desarrollo; `00-verificar.sql` devuelve todo true y el panel fue contrastado con PostgREST real. Este chat no aplicó migraciones ni editó workflows.
 
 1. Las dependencias de conversaciones, resumen y score (#12), `20261127123402_bot_lead_details.sql` y `20261127123630_opportunity_bot_read_model.sql` ya están disponibles en desarrollo según la verificación anterior. En otros entornos comprobar su estado antes de operar: no confundir merge con migración aplicada.

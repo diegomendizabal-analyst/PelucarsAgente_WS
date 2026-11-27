@@ -126,7 +126,7 @@ def exercise(db, connect):
         assert rows(bot, COUNTS, (CHAT,)) == [(2, 1)]
         # Actualizar sólo el contador sin recalcular el tipo sigue siendo inválido.
         expect_error("22023", bot, RESERVE, (CHAT, msg3, "otra pregunta", "question", 2))
-        expect_error("23514", bot, """insert into public.messages
+        expect_error("42501", bot, """insert into public.messages
             (conversation_id, provider, business_phone_id, sender_kind, body, send_state, bot_slot, reply_to, reply_kind)
             values (%s, 'demo', 'demo-line', 'bot', 'otra pregunta', 'pending', 3, %s, 'question')""", (CHAT, msg3))
         expect_error("22023", bot, RESERVE, (CHAT, msg3, "ambigua", None, 2))
@@ -370,7 +370,7 @@ def exercise_score(db, connect):
     print("OK: demo local 50/100, desglose 20+0+15+15, tres citas, reintento concurrente, rollback y RLS")
 
 
-def run(score_only=False):
+def run(score_only=False, d07_only=False):
     # Ignore ambient libpq connection/service settings, including PGSERVICE and PGHOSTADDR.
     for key in list(os.environ):
         if key.startswith("PG"):
@@ -387,15 +387,21 @@ def run(score_only=False):
             probe.bind(("127.0.0.1", 0))
             port = probe.getsockname()[1]
         ctl = ["pg_ctl", "-D", data, "-w"]
-        subprocess.run([*ctl, "-l", str(Path(directory) / "postgres.log"), "-o",
-                        f"-c listen_addresses=127.0.0.1 -c unix_socket_directories='' -p {port}", "start"], check=True)
+        log = Path(directory) / "postgres.log"
+        try:
+            subprocess.run([*ctl, "-l", str(log), "-o",
+                            f"-c listen_addresses=127.0.0.1 -c unix_socket_directories= -p {port}", "start"], check=True)
+        except subprocess.CalledProcessError:
+            if log.exists():
+                print(log.read_text(encoding="utf-8", errors="replace"))
+            raise
 
         def connect():
             return psycopg.connect(host="127.0.0.1", port=port, password=password, user="postgres",
-                                   dbname="postgres", autocommit=True)
+                                   dbname="postgres", options="-c timezone=UTC", autocommit=True)
         try:
             with connect() as db:
-                assert rows(db, "show data_directory") == [(data,)]
+                assert Path(rows(db, "show data_directory")[0][0]).resolve() == Path(data).resolve()
                 db.execute("""create role anon; create role authenticated; create role service_role bypassrls;
                     create schema auth; create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
                     create function auth.uid() returns uuid language sql stable as $$
@@ -403,6 +409,10 @@ def run(score_only=False):
                     grant usage on schema auth to anon,authenticated,service_role;""")
                 for migration in sorted((ROOT / "migrations").glob("*.sql")):
                     db.execute(migration.read_text(encoding="utf-8-sig"))
+                if d07_only:
+                    from bot_pause import exercise_d07
+                    exercise_d07(db, connect, overlap, rows, expect_error)
+                    return
                 if score_only:
                     exercise_score(db, connect)
                     return
@@ -421,4 +431,6 @@ if __name__ == "__main__":
         raise SystemExit("Run without python -O so test assertions are enabled.")
     parser = argparse.ArgumentParser()
     parser.add_argument("--score-only", action="store_true", help="Run only the score persistence checks")
-    run(score_only=parser.parse_args().score_only)
+    parser.add_argument("--d07-only", action="store_true", help="Run D07 admission, closure and concurrency checks")
+    args = parser.parse_args()
+    run(score_only=args.score_only, d07_only=args.d07_only)
